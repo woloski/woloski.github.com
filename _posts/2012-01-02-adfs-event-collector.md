@@ -1,7 +1,6 @@
 ---
 layout: post
-category : lessons
-tags : [intro, beginner, jekyll, tutorial]
+tags : [adfs, identity, reactive, event-log]
 ---
 {% include JB/setup %}
 
@@ -19,7 +18,7 @@ First thing was to understand how to read from the Event Log. Naturally as a dev
     EventLogQuery eventsQuery = new EventLogQuery("Application", PathType.LogName, "//System[EventID==500]");
     EventLogReader logReader = new EventLogReader(eventsQuery);
 
-http://msdn.microsoft.com/en-us/library/bb671200(v=vs.90).aspx
+[MSDN doc](http://msdn.microsoft.com/en-us/library/bb671200.aspx)
 
 This is the PULL model. Asking the Event Log things. The other model would be an event-based model (event log PUSHes event to the client).
 
@@ -30,7 +29,8 @@ This is the PULL model. Asking the Event Log things. The other model would be an
     watcher.EventRecordWritten +=
           new EventHandler<EventRecordWrittenEventArgs>(EventLogEventRead);
 
-http://msdn.microsoft.com/en-us/library/bb671202(v=vs.90).aspx
+
+[MSDN doc](http://msdn.microsoft.com/en-us/library/bb671202.aspx)
 
 #### What are the things to consider in each model
 
@@ -99,8 +99,7 @@ Reactive Extensions represents a stram of evens as an `IObservable` that can be 
 
 Here is the output of a small program that uses the `EventLogWatcher` and Reactive Extensions to extract what we want from the event log. This is running on an ADFS server while poeple is logging in to applications
 
-<a href="http://swmarkdownr.blob.core.windows.net/images/1877864182.png"><img src="http://swmarkdownr.blob.core.windows.net/images/1877864182.png" width="650"></a>
-[(click to enlarge)](http://swmarkdownr.blob.core.windows.net/images/1877864182.png)
+<img src="http://swmarkdownr.blob.core.windows.net/images/1877864182.png" width="650">
 
-The source code for a Console App with the spike is here: https://gist.github.com/2370950
+The source code for a Console App with the spike is here: <https://gist.github.com/2370950>
 
