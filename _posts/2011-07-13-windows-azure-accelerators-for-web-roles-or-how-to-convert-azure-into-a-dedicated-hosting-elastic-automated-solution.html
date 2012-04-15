@@ -1,0 +1,82 @@
+--- 
+layout: post
+title: Windows Azure Accelerators for Web Roles or How to Convert Azure into a dedicated hosting elastic automated solution
+published: true
+meta: {}
+
+tags: 
+- Azure
+- Cloud Computing
+- Emerging Technology
+type: post
+status: publish
+---
+<p>Yesterday <a href="http://ntotten.com/2011/07/windows-azure-accelerator-for-web-roles/">Nathan announced</a> the release of the <a href="http://waawebroles.codeplex.com/">Windows Azure Accelerators for Web Roles</a>. If you are using Windows Azure today, this can be a pain relief if you’ve got used to wait 15 minutes (or more) every time you deploy to Windows Azure (and hope nothing was wrong in the package to realize after then that you’ve lost 15 minutes of your life). </p> <p>Also, as the title says, and as <a href="http://blog.maartenballiauw.be/post/2011/07/13/Windows-Azure-Accelerator-for-Web-Roles.aspx">Maarten says in his blog</a>, if you have lots of small websites you don’t want to pay for 100 different web roles because that will be lots of money. Since Azure 1.4 you can use the Full IIS support but the experience is not optimal from the management perspective because it requires to redeploy each time you add a new website to the cscfg.</p> <p>In short, the best way I can describe this accelerator is: </p> <blockquote> <p><strong>It transform your Windows Azure web roles into a dedicated elastic hosting solution with farm support and a very nice IIS web interface to manage the websites</strong>.</p></blockquote> <p>I won’t go into much more details on the WHAT, since <a href="http://ntotten.com/2011/07/windows-azure-accelerator-for-web-roles/">Nathan</a> and <a href="http://blog.maartenballiauw.be/post/2011/07/13/Windows-Azure-Accelerator-for-Web-Roles.aspx">Maarten</a> already did a great job in their blogs. Instead I will focus on the HOW. We all love that things work, but when they don’t work you want to know where to touch. So, below you can find the <em>blueprints</em> of the engine.</p> <p><font size="5"></font>&nbsp;</p> <p><a href="http://blogs.southworks.net/mwoloski/files/2011/07/image7.png"><img style="border-bottom: 0px;border-left: 0px;padding-left: 0px;padding-right: 0px;border-top: 0px;border-right: 0px;padding-top: 0px" border="0" alt="image" src="http://blogs.southworks.net/mwoloski/files/2011/07/image_thumb6.png" width="640" height="455"></a></p> <p>&nbsp;</p> <p><a href="http://blogs.southworks.net/mwoloski/files/2011/07/image8.png"><img style="border-bottom: 0px;border-left: 0px;padding-left: 0px;padding-right: 0px;border-top: 0px;border-right: 0px;padding-top: 0px" border="0" alt="image" src="http://blogs.southworks.net/mwoloski/files/2011/07/image_thumb7.png" width="640" height="390"></a></p> <p>Below some key code snippets that shows how things work.</p> <p>The snippet below is the WebRole Entry Point Run method. We are spinning the Synchronization Service here that will block the execution. Since this is a web role, it will launch the IIS process as well and execute the code as usual.&nbsp; </p><pre class="brush: csharp;">public override void Run()
+{
+    Trace.TraceInformation("WebRole.Run");
+
+    // Initialize SyncService
+    var localSitesPath = GetLocalResourcePathAndSetAccess("Sites");
+    var localTempPath = GetLocalResourcePathAndSetAccess("TempSites");
+    var directoriesToExclude = RoleEnvironment.GetConfigurationSettingValue("DirectoriesToExclude").Split(';');
+    var syncInterval = int.Parse(RoleEnvironment.GetConfigurationSettingValue("SyncIntervalInSeconds"), CultureInfo.InvariantCulture);
+
+    this.syncService = new SyncService(localSitesPath, localTempPath, directoriesToExclude, "DataConnectionstring");
+    this.syncService.SyncForever(TimeSpan.FromSeconds(syncInterval));
+}
+</pre>
+<p>Then the other important piece is the SyncForever method. What this method does is the following:</p>
+<ul>
+<li>Update the IIS configuration using the IIS ServerManager API by reading from table storage</li>
+<li>Synchronize the WebDeploy package from blob to local storage (point 4 in the diagram)</li>
+<li>Deploy the sites using WebDeploy API, by taking the package from local storage</li>
+<li>Creates and copies the WebDeploy package from IIS (if something changed)</li></ul><pre class="brush: csharp;">public void SyncForever(TimeSpan interval)
+{
+    while (true)
+    {
+        Trace.TraceInformation("SyncService.Checking for synchronization");
+
+        try
+        {
+            this.UpdateIISSitesFromTableStorage();
+        }
+        catch (Exception e)
+        {
+            Trace.TraceError("SyncService.UpdateIISSitesFromTableStorage{0}{1}", Environment.NewLine, e.TraceInformation());
+        }
+
+        try
+        {
+            this.SyncBlobToLocal();
+        }
+        catch (Exception e)
+        {
+            Trace.TraceError("SyncService.SyncBlobToLocal{0}{1}", Environment.NewLine, e.TraceInformation());
+        }
+
+        try
+        {
+            this.DeploySitesFromLocal();
+        }
+        catch (Exception e)
+        {
+            Trace.TraceError("SyncService.DeploySitesFromLocal{0}{1}", Environment.NewLine, e.TraceInformation());
+        }
+
+        try
+        {
+            this.PackageSitesToLocal();
+        }
+        catch (Exception e)
+        {
+            Trace.TraceError("SyncService.PackageSitesToLocal{0}{1}", Environment.NewLine, e.TraceInformation());
+        }
+
+        Trace.TraceInformation("SyncService.Synchronization completed");
+
+        Thread.Sleep(interval);
+    }
+}
+</pre>
+<p>My advice: If you are using Windows Azure today don’t waste more time doing lengthy deployments <img style="border-bottom-style: none;border-left-style: none;border-top-style: none;border-right-style: none" class="wlEmoticon wlEmoticon-smile" alt="Smile" src="http://blogs.southworks.net/mwoloski/files/2011/07/wlEmoticon-smile1.png">&nbsp;<a href="http://waawebroles.codeplex.com/">Download the Windows Azure Accelerators for Web Roles</a>.</p>
+<p>Enjoy!</p>

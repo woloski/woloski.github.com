@@ -1,0 +1,132 @@
+--- 
+layout: post
+title: Managing the lifecycle of security tokens (Geneva, STS, WCF...)
+published: true
+meta: 
+  _edit_lock: "1234336486"
+  _edit_last: "24"
+tags: 
+- Geneva
+- Identity Management
+- Security Token Service
+- WCF
+- Zermatt
+type: post
+status: publish
+---
+<p></p>  <div>&#160;</div>  <div>One of the things I didn't like of the WSFederationHttpBinding is that it encapsulates lots of things. In particular, the call against the STS to obtain a SAML token. I wanted to have control over that process.&#160; The good news is that the Geneva Framework allow us to do all that in a very simple fashion (after using some Lutz :)). </div>  <div>So, forget about custom WCF IssuedSecurityTokenProviders, and welcome WSTrustClient and FederatedClientCredentials!</div>  <div>&#160;</div>  <h3>Calling your STS to obtain a token</h3>  <div>&#160;</div>  <div>The first thing you might want to do is call your STS to obtain a token. This is the simplest way to do it:</div>  <div>&#160;</div>  <div>   <pre style="padding-right: 0px;padding-left: 0px;font-size: 8pt;padding-bottom: 0px;margin: 0em;width: 100%;color: black;padding-top: 0px;font-family: consolas, &#39;Courier New&#39;, courier, monospace"><span style="color: #0000ff">private</span> SecurityToken GetIdentityProviderToken()
+{
+    var client = <span style="color: #0000ff">new</span> WSTrustClient(
+                                    <span style="color: #0000ff">this</span>.identityProviderActiveStsBinding,
+                                    <span style="color: #0000ff">this</span>.identityProviderActiveStsUrl,
+                                    System.ServiceModel.Security.TrustVersion.WSTrustFeb2005,
+                                    <span style="color: #0000ff">new</span> System.ServiceModel.Description.ClientCredentials());
+
+    client.ClientCredentials.ServiceCertificate.DefaultCertificate = <span style="color: #0000ff">this</span>.identityProviderStsCertificate;
+    var request = <span style="color: #0000ff">new</span> RequestSecurityToken(RequestTypeConstants.Issue);
+    request.AppliesTo = <span style="color: #0000ff">this</span>.identityProviderAppliesToUrl;
+
+    var identityToken = client.Issue(request);
+    client.Close();
+    <span style="color: #0000ff">return</span> identityToken;
+}</pre>
+</div>
+
+<h3>&#160;</h3>
+
+<h3>Overriding the ClientBase to inject the security token with Geneva</h3>
+
+<p>Once you have the token you want to inject that token into your client proxy. The code below shows a nice and clean way to inject the SAML token into the WCF channel. Notice the ctor takes a dependency on a custom interface ISecurityTokenProvider. This is a very simple interface I created with a single method <em>GetSecurityToken</em>. On channel construction we are going to pass the proxy through Geneva <em>CreateChannelWithIssuedToken </em>method. This will change the ClientCredentials of the channel to use the FederatedClientCredentials that will shortcircuit the IssuedSecurityTokenProvider of the binding by returning the &quot;external&quot; security token. </p>
+
+<div>
+  <pre style="padding-right: 0px;padding-left: 0px;font-size: 8pt;padding-bottom: 0px;margin: 0em;width: 100%;color: black;padding-top: 0px;font-family: consolas, &#39;Courier New&#39;, courier, monospace"><span style="color: #0000ff">public</span> <span style="color: #0000ff">class</span> FederatedCatalogServiceClient : ClientBase&lt;ICatalogService&gt;, ICatalogService
+{
+    <span style="color: #0000ff">private</span> ISecurityTokenProvider tokenProvider;
+
+    <span style="color: #0000ff">public</span> FederatedCatalogServiceClient(ISecurityTokenProvider tokenProvider, ...)
+    {
+        <span style="color: #0000ff">this</span>.tokenProvider = tokenProvider;
+    }
+
+    <span style="color: #008000">// operations ...</span>
+
+    <span style="color: #0000ff">protected</span> <span style="color: #0000ff">override</span> ICatalogService CreateChannel()
+    {
+        ICatalogService channel;
+        <span style="color: #0000ff">lock</span> (<span style="color: #0000ff">this</span>.ChannelFactory)
+        {
+            FederatedClientCredentials.ConfigureChannelFactory(<span style="color: #0000ff">this</span>.ChannelFactory);
+            channel = ChannelFactoryOperations.CreateChannelWithIssuedToken(
+                <span style="color: #0000ff">this</span>.ChannelFactory,
+                <span style="color: #0000ff">this</span>.tokenProvider.GetSecurityToken());
+        }
+
+        <span style="color: #0000ff">return</span> channel;
+    }
+}</pre>
+</div>
+
+<h3>&#160;</h3>
+
+<h3>Custom Binding to call a service that requires a token</h3>
+
+<p>Finally, since we don't want to use WSFederationBinding anymore because it will grab the token for us, the code below will create a binding &quot;similar&quot; to the federation binding but won't never call our STS. We still have to provide some configuration settings like the urls so the binding can be constructed, but they won't be used on runtime.</p>
+
+<div>
+  <pre style="padding-right: 0px;padding-left: 0px;font-size: 8pt;padding-bottom: 0px;margin: 0em;width: 100%;color: black;padding-top: 0px;font-family: consolas, &#39;Courier New&#39;, courier, monospace"><span style="color: #0000ff">public</span> Binding CreateBinding()
+{
+    var finalBinding = <span style="color: #0000ff">new</span> CustomBinding();
+
+    var bindingProtection = <span style="color: #0000ff">new</span> X509SecurityTokenParameters(X509KeyIdentifierClauseType.Thumbprint);
+    bindingProtection.ReferenceStyle = SecurityTokenReferenceStyle.Internal;
+    bindingProtection.InclusionMode = SecurityTokenInclusionMode.Never;
+    bindingProtection.X509ReferenceStyle = X509KeyIdentifierClauseType.Thumbprint;
+
+    var security = <span style="color: #0000ff">new</span> SymmetricSecurityBindingElement(bindingProtection);
+
+    security.MessageSecurityVersion = MessageSecurityVersion.WSSecurity11WSTrustFebruary2005WSSecureConversationFebruary2005WSSecurityPolicy11BasicSecurityProfile10;
+    security.RequireSignatureConfirmation = <span style="color: #0000ff">true</span>;
+
+    var issuerBinding = <span style="color: #0000ff">new</span> CustomBinding();
+
+    issuerBinding.Elements.Add(<span style="color: #0000ff">new</span> TransactionFlowBindingElement());
+
+    var protection = <span style="color: #0000ff">new</span> SecureConversationSecurityTokenParameters();
+    var issuerSecurity = <span style="color: #0000ff">new</span> SymmetricSecurityBindingElement(protection);
+    issuerSecurity.MessageSecurityVersion = MessageSecurityVersion.WSSecurity11WSTrustFebruary2005WSSecureConversationFebruary2005WSSecurityPolicy11BasicSecurityProfile10;
+
+    issuerBinding.Elements.Add(issuerSecurity);
+
+    security.EndpointSupportingTokenParameters.Endorsing.Add(
+        <span style="color: #0000ff">new</span> IssuedSecurityTokenParameters(
+            <span style="color: #006080">&quot;http://docs.oasis-open.org/wss/oasis-wss-saml-token-profile-1.1#SAMLV1.1&quot;</span>,
+            <span style="color: #0000ff">new</span> EndpointAddress(<span style="color: #006080">&quot;http://notused&quot;</span>),
+            issuerBinding)
+        {
+            IssuerMetadataAddress = <span style="color: #0000ff">new</span> EndpointAddress(<span style="color: #006080">&quot;http://notused/mex&quot;</span>)
+        });
+
+    security.ProtectionTokenParameters = <span style="color: #0000ff">new</span> X509SecurityTokenParameters(X509KeyIdentifierClauseType.Thumbprint, SecurityTokenInclusionMode.Never);
+
+    var protectionSecurityProtectionParameters = <span style="color: #0000ff">new</span> SspiSecurityTokenParameters();
+    protectionSecurityProtectionParameters.RequireCancellation = <span style="color: #0000ff">true</span>;
+    security.ProtectionTokenParameters.InclusionMode = SecurityTokenInclusionMode.Never;
+
+    var protectionSecurity = <span style="color: #0000ff">new</span> SymmetricSecurityBindingElement(protectionSecurityProtectionParameters);
+    protectionSecurity.MessageSecurityVersion = MessageSecurityVersion.WSSecurity11WSTrustFebruary2005WSSecureConversationFebruary2005WSSecurityPolicy11BasicSecurityProfile10;
+
+    protection.BootstrapSecurityBindingElement = protectionSecurity;
+
+    finalBinding.Elements.Add(security);
+
+    issuerBinding.Elements.Add(<span style="color: #0000ff">new</span> TextMessageEncodingBindingElement());
+    issuerBinding.Elements.Add(<span style="color: #0000ff">new</span> HttpTransportBindingElement());
+
+    finalBinding.Elements.Add(<span style="color: #0000ff">new</span> TextMessageEncodingBindingElement());
+    finalBinding.Elements.Add(<span style="color: #0000ff">new</span> HttpTransportBindingElement());
+
+    <span style="color: #0000ff">return</span> finalBinding;
+}</pre>
+</div>
+
+<p>Happy Federation! :)</p>

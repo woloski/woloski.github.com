@@ -1,0 +1,12 @@
+--- 
+layout: post
+title: Exception Logging to Email Sink
+published: true
+meta: {}
+
+tags: 
+- EntLib
+type: post
+status: publish
+---
+<p>Send an email when an exception is thrown using EntLib is not rocket science.</p>  <p>Here is a screen shot of how the configuration looks like</p>  <p><a href="http://blogs.southworks.net/mwoloski/files/2008/06/ex1.gif"><img height="356" alt="ex1" src="http://blogs.southworks.net/mwoloski/files/2008/06/ex1-thumb.gif" width="426" border="0" /></a></p>  <p>The steps involved are:</p>  <ol>   <li>Create an Exception Handling App Block      <br /></li>    <li>Create a New Policy (for instance &#226;&#8364;&#339;Email Policy&#226;&#8364;&#339;)      <br /></li>    <li>Create a new type of Exception to manage on the policy. Using &#226;&#8364;&#339;Exception&#226;&#8364;&#339; will catch every kind of exception thrown      <br /></li>    <li>Create a new Logging Handler for the Exception. Here the Logging and Instrumentation App Block will be added to the config.      <br /></li>    <li>Add the Email Sink on the Logging Block and configure it (from and to email address, etc).      <br /></li>    <li>Create a new Category (for instance &#226;&#8364;&#339;Several&#226;&#8364;&#339;) and add a new Destination      <br /></li>    <li>Configure the Destintation to use the Text Formatter and the Email Sink      <br /></li>    <li>Go to the Logging Handler node and set the LogCategory to &#226;&#8364;&#339;Several&#226;&#8364;&#339; </li> </ol>  <p>Here are the config files <a href="/blogs/matiaswoloski/content/binary/ExceptionLoggingToEmail.zip">ExceptionLoggingToEmail.zip (2.91 KB)</a></p>  <p>Btw, sending an email is a task that requires some resources so   <br />maybe It would be better to use the Async Logging as I described in the    <br /><a href="/matiaswoloski/PermaLink,guid,35cd46fe-d2d8-49bc-9e76-409c84272a4b.aspx">last post</a>. And let the distributor service to send the exception email in another process or server.</p>

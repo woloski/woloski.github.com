@@ -1,0 +1,18 @@
+--- 
+layout: post
+title: "Identity prime time with Microsoft Identity Framework \xE2\x80\x9CZermatt\xE2\x80\x9D"
+published: true
+meta: {}
+
+tags: 
+- Architecture
+- CardSpace
+- Federation
+- Identity
+- Indigo
+- SaaS
+- Zermatt
+type: post
+status: publish
+---
+<p>Implementing authentication and authorization mechanisms for applications is something we do over and over. However designing the identity architecture to be adopted across an enterprise is a more challenging task. Based on my experience, reusability ends up happening at the application level as opposed to the enterprise level. So, designing this architecture requires think about: <b>different trust boundaries, complex access checks and centralized management</b>. </p>  <p>The solution that I’ve been using lately with good results is <b>Security Token Service</b>. Today, standards like WS-Trust and SAML among others are mature enough and technology stacks like WCF or Sun Metro fully support them, making it easier to have an interoperable and strategic infrastructure in place. The Security Token Service provided me with a generic and customizable architecture component that became part of my architecture toolbox.</p>  <p>However, the concepts behind Security Token Services are not trivial to understand, and the value they provide is sometimes hidden under its complexity. The good news is that Microsoft has started to invest on a high-level identity framework that will work on top of CardSpace, WCF and ASP.NET. The new kid on the block is codenamed “<a href="https://connect.microsoft.com/site/sitehome.aspx?SiteID=642">Zermatt</a>” and will help approaching the separation of concerns on authentication and authorization; the federated security scenario; tackling real claim-based authorization on both presentation and service layer; and potentially integrate with “<i>cloud</i>” infrastructure like the <a href="http://biztalk.net/">Internet Service Bus</a>.</p>  <p>Extrapolating <a href="http://blogs.southworks.net/mwoloski/2007/03/11/the-holly-grail-of-enterprise-soa-security/">the scenario I wrote about</a> in March 2007 we might be able to create something like the following diagram with much less code:</p>  <p><a href="http://blogs.southworks.net/mwoloski/files/2008/07/image.png"><img height="423" alt="image" src="http://blogs.southworks.net/mwoloski/files/2008/07/image-thumb.png" width="644" border="0" /></a> </p>  <p></p>  <p></p>  <p></p>  <p></p>  <p></p>  <p></p>  <p></p>  <p></p>  <p></p>  <p></p>  <p></p>  <p></p>  <p></p>  <p></p>  <p>Finally, I recommend you to add <a href="http://blogs.msdn.com/vbertocci/rss.xml">Vittorio’s RSS</a> to your feed reader because he will share, as usual, much more info (<a href="http://blogs.msdn.com/vbertocci/archive/2008/07/09/announcing-the-beta-release-of-zermatt-developer-identity-framework.aspx">already started</a> actually).</p>

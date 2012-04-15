@@ -1,0 +1,82 @@
+--- 
+layout: post
+title: EDRA 1.1 Final Bits
+published: true
+meta: {}
+
+tags: 
+- Shadowfax
+type: post
+status: publish
+---
+
+        <P class="MsoNormal"><SPAN></SPAN> </P>
+<P class="MsoNormal"><SPAN>EDRA 1.1 is released. You can download it from <A href="http://www.southworks.net/edra/builds.aspx">http://www.southworks.net/edra/builds.aspx</A></SPAN></P>
+<P class="MsoNormal"><SPAN></SPAN> </P>
+<P class="MsoNormal"><SPAN>From <A href="http://weblogs.asp.net/hernandl/">Hernan de Lahitte</A> blog</SPAN></P>
+<P class="MsoNormal"><SPAN></SPAN> </P>
+<P class="MsoNormal"><SPAN><EM>This version has improvements in the following areas:</EM></SPAN></P>
+<P class="MsoNormal"><SPAN><EM> </EM></SPAN></P>
+<P class="MsoNormal"><SPAN><EM><SPAN>      â— </SPAN>Tooling &amp; Wizards</EM></SPAN></P>
+<P class="MsoNormal"><EM><SPAN><SPAN>      â— </SPAN></SPAN><SPAN>New &amp; Enhanced Handlers</SPAN></EM></P>
+<P class="MsoNormal"><SPAN><EM><SPAN>      â— </SPAN>Better Configuration Support</EM></SPAN></P>
+<P class="MsoNormal"><SPAN><EM><SPAN>      â— </SPAN>Performance gains in specific areas</EM></SPAN></P>
+<P class="MsoNormal"><EM><SPAN><SPAN>      â— </SPAN>Bug fixing (as usually happens with upgrades)</SPAN><SPAN> </SPAN></EM></P>
+<P class="MsoNormal"><SPAN><EM> </EM></SPAN></P>
+<P class="MsoNormal"><SPAN></SPAN><EM> </EM></P>
+<P class="MsoNormal"><SPAN><EM>The main new features that you will find are here:</EM></SPAN></P>
+<P class="MsoNormal"><SPAN><EM> </EM></SPAN></P>
+<P class="MsoNormal"><SPAN><EM>â— Wizards. The following wizards are included:</EM></SPAN></P>
+<P class="MsoNormal"><SPAN><EM>â— Create New Solution. This wizard helps you create a new solution with the</EM></SPAN></P>
+<P class="MsoNormal"><SPAN><EM>EDAF code base.</EM></SPAN></P>
+<P class="MsoNormal"><SPAN><EM>â— Add Business Action. This wizard helps you add a business action to a project</EM></SPAN></P>
+<P class="MsoNormal"><SPAN><EM>in your EDAF solution.</EM></SPAN></P>
+<P class="MsoNormal"><SPAN><EM>â— Expose Service Action on a Transport. This wizard helps you expose the</EM></SPAN></P>
+<P class="MsoNormal"><SPAN><EM>business action on one of the available transports: InProc, Message Queuing,</EM></SPAN></P>
+<P class="MsoNormal"><SPAN><EM>Remoting, or Web service.</EM></SPAN></P>
+<P class="MsoNormal"><SPAN><EM> </EM></SPAN></P>
+<P class="MsoNormal"><SPAN><EM>â— In-Proc Service Interface. Allows the pipeline and handlers to be executed in the</EM></SPAN></P>
+<P class="MsoNormal"><SPAN><EM>same process as the host environment.</EM></SPAN></P>
+<P class="MsoNormal"><SPAN><EM> </EM></SPAN></P>
+<P class="MsoNormal"><SPAN><EM>â— TokenAuthentication handler. Used for custom authentication scenarios; allows</EM></SPAN></P>
+<P class="MsoNormal"><SPAN><EM>the first authentication to occur using a user name and password, and then the</EM></SPAN></P>
+<P class="MsoNormal"><SPAN><EM>handler issues a high-entropy token that can be used for authentication on</EM></SPAN></P>
+<P class="MsoNormal"><SPAN><EM>subsequent Web service requests.</EM></SPAN></P>
+<P class="MsoNormal"><SPAN><EM> </EM></SPAN></P>
+<P class="MsoNormal"><SPAN><EM>â— DuplicateMessage handler. In addition to existing functionality, added a</EM></SPAN></P>
+<P class="MsoNormal"><SPAN><EM>configurable reject mode to the handler to allow duplicate messages to be rejected.</EM></SPAN></P>
+<P class="MsoNormal"><SPAN><EM> </EM></SPAN></P>
+<P class="MsoNormal"><SPAN><EM>â— Additional runtime configuration validation. Moved logic from the external</EM></SPAN></P>
+<P class="MsoNormal"><SPAN><EM>configuration validation utility into the runtime so that as a configuration file is</EM></SPAN></P>
+<P class="MsoNormal"><SPAN><EM>modified, validation will automatically occur.</EM></SPAN></P>
+<P class="MsoNormal"><SPAN><EM> </EM></SPAN></P>
+<P class="MsoNormal"><SPAN><EM>â— Configure exception shielding. Added a configurable mode so that exception</EM></SPAN></P>
+<P class="MsoNormal"><SPAN><EM>shielding can be enabled or disabled. Exception shielding is a helpful feature for</EM></SPAN></P>
+<P class="MsoNormal"><SPAN><EM>production environments where an exception should not provide the client with</EM></SPAN></P>
+<P class="MsoNormal"><SPAN><EM>internal information (such as a connection string). During development and</EM></SPAN></P>
+<P class="MsoNormal"><SPAN><EM>testing however, it is useful to see the exceptions that are raised.</EM></SPAN></P>
+<P class="MsoNormal"><SPAN><EM> </EM></SPAN></P>
+<P class="MsoNormal"><SPAN><EM>â— Improve Performance. The following areas have been tuned to increase</EM></SPAN></P>
+<P class="MsoNormal"><SPAN><EM>performance:</EM></SPAN></P>
+<P class="MsoNormal"><SPAN><EM>â— SyntacticValidation handler by caching the XSD and compiling it after loading.</EM></SPAN></P>
+<P class="MsoNormal"><SPAN><EM>â— DCOM dispatching transport by creating a proxy pool.</EM></SPAN></P>
+<P class="MsoNormal"><SPAN><EM>â— WebService interface transport by optimizing stream handling.</EM></SPAN></P>
+<P class="MsoNormal"><SPAN><EM> </EM></SPAN></P>
+<P class="MsoNormal"><SPAN><EM>â— Binary Application Template Solution. Can be used to demonstrate how the</EM></SPAN></P>
+<P class="MsoNormal"><SPAN><EM>EDAF could be deployed and used within a large organization after EDAF has</EM></SPAN></P>
+<P class="MsoNormal"><SPAN><EM>been customized to meet your requirements. The template references the binaries</EM></SPAN></P>
+<P class="MsoNormal"><SPAN><EM>instead of the EDRA source code projects. This makes the resulting Visual Studio</EM></SPAN></P>
+<P class="MsoNormal"><SPAN><EM>solution easier to develop with because the solution is easier to navigate and it</EM></SPAN></P>
+<P class="MsoNormal"><SPAN><EM>reduces compile time.</EM></SPAN></P>
+<P class="MsoNormal"><SPAN><EM> </EM></SPAN></P>
+<P class="MsoNormal"><SPAN><EM>â— Visual Basic .NET Application Template Solution. Can be used as a starting</EM></SPAN></P>
+<P class="MsoNormal"><SPAN><EM>point for creating applications in Visual Basic .NET. The template still references</EM></SPAN></P>
+<P class="MsoNormal"><SPAN><EM>the EDRA frameworkâ€™s Visual C# .NET projects.</EM></SPAN></P>
+<P class="MsoNormal"><SPAN><EM> </EM></SPAN></P>
+<P class="MsoNormal"><SPAN><EM>â— Visual Basic .NET Code Snippets included in the documentation. You can use</EM></SPAN></P>
+<P class="MsoNormal"><SPAN><EM>these snippets with the Visual Basic .NET Application Template Solution and</EM></SPAN></P>
+<P class="MsoNormal"><SPAN><EM>while you step through the Tutorial and the Developerâ€™s Guide.</EM></SPAN></P>
+<P class="MsoNormal"><SPAN><EM> </EM></SPAN></P>
+<P class="MsoNormal"><SPAN><EM>â— WSE Support. Explains different ways of configuring the service interface with</EM></SPAN></P>
+<P class="MsoNormal"><SPAN><EM>Web Services Enhancements 2.0 for Microsoft .NET (WSE).</EM></SPAN></P>
+      

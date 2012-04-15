@@ -1,0 +1,14 @@
+--- 
+layout: post
+title: Dynamic ClaimsPrincipal with C# 4
+published: true
+meta: {}
+
+tags: 
+- dynamic
+- Emerging Technology
+- Windows Identity Foundation
+type: post
+status: publish
+---
+<p><a href="http://travisspencer.com/blog/2010/05/mapping-claims-to-a-dynamic-us.html?utm_source=twitter&amp;utm_medium=social-media&amp;utm_term=.net&amp;utm_content=&amp;utm_campaign=geneva">Travis wrote</a> an interesting blog post about mixing the new dynamic feature in C# 4 and claims. His idea was to use a User class derived from DynamicObject as a proxy to get claims. Here is some of the code he shows:</p>  <blockquote>   <p><em>var claims = new[]        <br />&#160;&#160;&#160; {         <br />&#160;&#160;&#160;&#160;&#160;&#160;&#160; new Claim(&quot;foo&quot;, &quot;3&quot;),         <br />&#160;&#160;&#160;&#160;&#160;&#160;&#160; new Claim(&quot;foo_bar&quot;, &quot;true&quot;),         <br />&#160;&#160;&#160;&#160;&#160;&#160;&#160; new Claim(&quot;foo_baz&quot;, &quot;Ted&quot;),         <br />&#160;&#160;&#160;&#160;&#160;&#160;&#160; new Claim(&quot;http://schemas.travisspencer.com/2010/05/test/claims/shoesize&quot;, &quot;11&quot;),         <br />&#160;&#160;&#160;&#160;&#160;&#160;&#160; new Claim(&quot;http://schemas.travisspencer.com/2010/05/test/claims/haircolor&quot;, &quot;blond&quot;),         <br />&#160;&#160;&#160;&#160;&#160;&#160;&#160; new Claim(&quot;Age&quot;, &quot;16&quot;),         <br />&#160;&#160;&#160; };         <br />&#160;&#160;&#160; var identity = new ClaimsIdentity(claims);         <br />&#160;&#160;&#160; dynamic user = new MyGoodUser(identity);         <br />&#160;&#160;&#160; Console.WriteLine(&quot;Foo = {0}&quot;, user.Foo);</em></p> </blockquote>  <p>Now, If you look carefully most of the claims are defined with a long namespace plus a friendly name, like:</p>  <p><a href="http://blogs.southworks.net/mwoloski/files/2010/06/image.png"><img border="0" alt="image" src="http://blogs.southworks.net/mwoloski/files/2010/06/image-thumb.png" width="640" height="156" /></a> </p>  <p>So wouldn’t it be nice if I could do something like</p>  <p><em><font face="consolas">Thread.CurrentPrincipal.AsClaims().GivenName        <br /></font></em><em><font face="consolas">Thread.CurrentPrincipal.AsClaims().HomePhone</font></em></p>  <p>Well, I took Travis code and tweaked here and there and here is how it looks:</p>  <p>&#160;<a href="http://blogs.southworks.net/mwoloski/files/2010/06/image1.png"><img border="0" alt="image" src="http://blogs.southworks.net/mwoloski/files/2010/06/image-thumb1.png" width="529" height="332" /></a> </p>  <p>This is user experience applied to the API :) I like to call it DX (Developer Experience). </p>  <p>I posted the code here</p>  <p><a href="http://pastie.org/991525">http://pastie.org/991525</a></p>

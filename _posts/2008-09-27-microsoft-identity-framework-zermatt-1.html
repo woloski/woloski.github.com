@@ -1,0 +1,170 @@
+--- 
+layout: post
+title: "Microsoft Identity Framework (Zermatt) #1"
+published: true
+meta: 
+  _edit_last: "24"
+  _edit_lock: "1227086637"
+tags: 
+- Federation
+- Identity Management
+- Security Token Service
+- Zermatt
+type: post
+status: publish
+---
+<p>In these series I want to show the usage of Zermatt to solve some typical scenarios in identity management. I will assume that the reader is already familiar with concepts like security token service, claims, tokens, credentials, etc. If not, you can read <a href="http://msdn.microsoft.com/en-us/library/cc836390.aspx">this article</a> from Vittorio Bertocci on July 2008 issue of the <a href="http://msdn.microsoft.com/en-us/library/bb410935.aspx">Architecture Journal</a>.</p>  <p>This first post will be about the simplest scenario in identity management: the Active Client with a single STS. In other words, a client that calls a web service with a policy that says that you need to use a certain token to talk to him.</p>  <p><a href="http://blogs.southworks.net/mwoloski/files/2008/09/image.png"><img height="420" alt="image" src="http://blogs.southworks.net/mwoloski/files/2008/09/image-thumb.png" width="640" border="0" /></a></p>  <p>&#160;</p>  <p>The sequence of actions in this scenario is:</p>  <ol>   <li>Since the client needs to obtain a token before talk to the service, it will make a <strong>WS-Trust call</strong> to the <strong>STS</strong> sending some kind of credentials. It could be <strong>Windows credentials</strong>, a <strong>X509 certificate</strong>, <strong>username and password</strong> or maybe another token (we'll leave that for a future post). </li>    <li>The STS will <strong>authenticate the caller</strong> and probably will <strong>output some claims</strong> about him. These claims might come from some repository like a database or AD. If the client is using Windows credentials, maybe the claims will be the groups the user belongs, the email and the full name. If the client is using username and password, the claims could be the roles stored in a database table. However, the claims could be anything you want that will be used later to perform access checks on the service. </li>    <li>The response is sent to the client containing an <strong>RSTR</strong> (Request Security Token Response) that will contain the requested <strong>security token with the claims</strong>. This token can be <strong>encrypted </strong>so only the service can decrypt it. For doing that, the STS will use the <strong>public key of the service</strong> certificate. The token will be also signed by the STS to avoid untrusted issuers. To sign the token, the <strong>STS will use a private key</strong>. </li>    <li>Finally, the client <strong>calls the service</strong> using the token obtained in 3. The service will only accept tokens of trusted issuers. Since there is a trust relationship between our STS and the service, the latter will have the <strong>public key of the STS </strong>that will allow him to check the signature of the token. </li> </ol>  <p>Having the sequence of things defined, we'll see how this can be achieved using Zermatt Beta 1. First, let me put some context on some of the decisions I will take.</p>  <p>One of the things I really like about Zermatt is the <strong>WSTrustClient</strong> class. This simple class allows anyone to issue a RST to an STS. If you ever tried to implement the approach depicted above with <strong>WCF</strong> you might have met with the <strong>wsFederationHttpBinding</strong>. This binding encapsulates the sequence above so the client <strong>doesn't have to worry about the behind the scenes of obtaining</strong> <strong>tokens</strong>. While this is good in some cases, when I started playing with this identity architecture, I felt that there was some kind of <strong>&quot;black magic&quot; happening</strong>. As someone that uses Reflector as its primary tool to solve most of the challenges with emergent technologies, I wanted to know how all this worked and <strong>I wanted to have control over the tokens</strong>. Well, knowing the theory helps a lot. I also recommend you to use <strong>WSTrustClient&#160; </strong>and &quot;<strong>do it yourself</strong>&quot;.</p>  <h3>[1] Issue token</h3>  <p>We will use a simple username and password to call the STS. The following method uses the WSTrustClient class to call the STS in localhost:6001/IPSTS. Notice the usage of WCF WSHttpBinding with Windows credentials. The RequestType property of the RequestSecurityToken class is not the regular WS-Trust issue SOAP action URI(<a href="http://schemas.xmlsoap.org/ws/2004/04/security/trust/RST/Issue">http://schemas.xmlsoap.org/ws/2004/04/security/trust/RST/Issue</a>), but a custom one. This is because Zermatt supports different WS-Trust versions and will do the transformation to the correct URI on runtime depending on the WSTrust version (by default is Feb 2005 version)</p>  <div>   <pre style="padding-right: 0px;padding-left: 0px;font-size: 8pt;padding-bottom: 0px;margin: 0em;width: 100%;color: black;padding-top: 0px;font-family: consolas, &#39;Courier New&#39;, courier, monospace"><span style="color: #0000ff">static</span> SecurityToken GetToken(<span style="color: #0000ff">string</span> username, <span style="color: #0000ff">string</span> password)
+{
+    var binding = <span style="color: #0000ff">new</span> WSHttpBinding(SecurityMode.Message);
+    binding.Security.Transport.ClientCredentialType = HttpClientCredentialType.Windows;
+    binding.Security.Message.ClientCredentialType = MessageCredentialType.Windows;
+
+    var ipAddress = <span style="color: #0000ff">new</span> EndpointAddress(<span style="color: #006080">&quot;http://localhost:6001/IPSTS&quot;</span>);
+
+    var client = <span style="color: #0000ff">new</span> WSTrustClient(binding, ipAddress);
+
+    client.ClientCredentials.Windows.ClientCredential.UserName = username;
+    client.ClientCredentials.Windows.ClientCredential.Password = password;
+
+    var rst = <span style="color: #0000ff">new</span> RequestSecurityToken();
+    rst.RequestType = <span style="color: #006080">&quot;http://schemas.microsoft.com/idfx/requesttype/issue&quot;</span>;            
+    var token = client.Issue(rst);            
+    <span style="color: #0000ff">return</span> token;
+}</pre>
+</div>
+
+<h3>[2] Authenticate &amp; fill tokens with claims</h3>
+
+<p>The STS in Zermatt have two methods to override. The first is GetScope which provides information related to the &quot;scope&quot; where this STS will be used (things like certificates to use to encrypt, to sign, etc) The second is GetOutputSubjects that will provide information about the subject (like claims). Here we are creating one claim of type http://schemas.xmlsoap.org/claim/Group for each group the user belongs.</p>
+
+<div>
+  <pre style="padding-right: 0px;padding-left: 0px;font-size: 8pt;padding-bottom: 0px;margin: 0em;width: 100%;color: black;padding-top: 0px;font-family: consolas, &#39;Courier New&#39;, courier, monospace"><span style="color: #0000ff">public</span> <span style="color: #0000ff">override</span> ClaimsIdentityCollection GetOutputSubjects(Scope scope, IClaimsPrincipal principal, RequestSecurityToken request)
+{
+    var claimsIdentities = <span style="color: #0000ff">new</span> ClaimsIdentityCollection();
+    var wI = (WindowsIdentity)principal.Identity;
+    var identity = <span style="color: #0000ff">new</span> ClaimsIdentity(principal.Identity);
+
+    <span style="color: #0000ff">foreach</span> (IdentityReference iD <span style="color: #0000ff">in</span> wI.Groups)
+    {
+        var groupName = <span style="color: #0000ff">new</span> SecurityIdentifier(iD.Value).Translate(<span style="color: #0000ff">typeof</span>(NTAccount)).ToString();
+        identity.Claims.Add(<span style="color: #0000ff">new</span> Claim(Constants.GroupClaimType, groupName));
+    }
+    claimsIdentities.Add(identity);
+
+    <span style="color: #0000ff">return</span> claimsIdentities;
+}</pre>
+</div>
+
+<h3>[3] Encrypting and signing the RSTR</h3>
+
+<p>In the <strong>GetScope</strong> method we are indicating how we are going to encrypt and sign the token</p>
+
+<div>
+  <pre style="padding-right: 0px;padding-left: 0px;font-size: 8pt;padding-bottom: 0px;margin: 0em;width: 100%;color: black;padding-top: 0px;font-family: consolas, &#39;Courier New&#39;, courier, monospace"><span style="color: #0000ff">protected</span> <span style="color: #0000ff">override</span> Scope GetScope(IClaimsPrincipal principal, RequestSecurityToken request)
+{
+    Scope scope = <span style="color: #0000ff">new</span> Scope(request, SecurityTokenServiceConfiguration.SigningCredentials);
+
+    scope.EncryptingCredentials = <span style="color: #0000ff">new</span> X509EncryptingCredentials(
+                                      CertificateUtil.GetCertificateByThumbprint(StoreName.TrustedPeople,
+                                                                      StoreLocation.LocalMachine,
+                                                                      Constants.EncryptingCertificateThumbprint));
+    <span style="color: #0000ff">return</span> scope;
+}</pre>
+</div>
+
+<h3>[4] Call the service using the token</h3>
+
+<p>At this point the client have a token in his hands. Now we need to use it on the outgoing message (on the WS-Security header). Here, we use the <strong>WSTrustClientCredentials</strong> class and set the <strong>SecurityToken</strong> we obtained before.</p>
+
+<div>
+  <pre style="padding-right: 0px;padding-left: 0px;font-size: 8pt;padding-bottom: 0px;margin: 0em;width: 100%;color: black;padding-top: 0px;font-family: consolas, &#39;Courier New&#39;, courier, monospace"><span style="color: #0000ff">private</span> <span style="color: #0000ff">static</span> <span style="color: #0000ff">void</span> CallService(SecurityToken token)
+{
+    var client = <span style="color: #0000ff">new</span> ShippingManagerClient();
+    
+    var credentials = <span style="color: #0000ff">new</span> WSTrustClientCredentials();
+    credentials.IssuedSecurityToken = token;
+    client.Endpoint.Behaviors.Remove&lt;ClientCredentials&gt;();
+    client.Endpoint.Behaviors.Add(credentials);
+    credentials.ConfigureChannel(client.InnerChannel);
+    
+    client.NewShipment();
+    client.Close();
+}</pre>
+</div>
+
+<p>The client will use a custom binding (not the wsFederationHttpBinding). Notice the issuer address is <a href="http://notused">http://notused</a>. We can do this because we are using <strong>WSTrustClientCredentials</strong> that creates a custom <strong>WCF</strong>&#160;<strong>IssuedSecurityTokenProvider</strong>. This provider will shortcircuit the interaction with the issuer and will simply return the token we set in the <strong>IssuedSecurityToken</strong> on <strong>WSTrustClientCredentials</strong>.</p>
+
+<div>
+  <pre style="padding-right: 0px;padding-left: 0px;font-size: 8pt;padding-bottom: 0px;margin: 0em;width: 100%;color: black;padding-top: 0px;font-family: consolas, &#39;Courier New&#39;, courier, monospace"><span style="color: #0000ff">&lt;</span><span style="color: #800000">bindings</span><span style="color: #0000ff">&gt;</span>
+    <span style="color: #0000ff">&lt;</span><span style="color: #800000">customBinding</span><span style="color: #0000ff">&gt;</span>
+        <span style="color: #0000ff">&lt;</span><span style="color: #800000">binding</span> <span style="color: #ff0000">name</span><span style="color: #0000ff">=&quot;CustomBinding_IShippingManager&quot;</span><span style="color: #0000ff">&gt;</span>
+            <span style="color: #0000ff">&lt;</span><span style="color: #800000">security</span> <span style="color: #ff0000">defaultAlgorithmSuite</span><span style="color: #0000ff">=&quot;Default&quot;</span> <span style="color: #ff0000">authenticationMode</span><span style="color: #0000ff">=&quot;IssuedTokenForCertificate&quot;</span>
+                <span style="color: #ff0000">requireDerivedKeys</span><span style="color: #0000ff">=&quot;true&quot;</span> <span style="color: #ff0000">securityHeaderLayout</span><span style="color: #0000ff">=&quot;Strict&quot;</span> <span style="color: #ff0000">includeTimestamp</span><span style="color: #0000ff">=&quot;true&quot;</span>
+                <span style="color: #ff0000">keyEntropyMode</span><span style="color: #0000ff">=&quot;CombinedEntropy&quot;</span> <span style="color: #ff0000">messageProtectionOrder</span><span style="color: #0000ff">=&quot;SignBeforeEncryptAndEncryptSignature&quot;</span>
+                <span style="color: #ff0000">messageSecurityVersion</span><span style="color: #0000ff">=&quot;WSSecurity11WSTrustFebruary2005WSSecureConversationFebruary2005WSSecurityPolicy11BasicSecurityProfile10&quot;</span>
+                <span style="color: #ff0000">requireSignatureConfirmation</span><span style="color: #0000ff">=&quot;true&quot;</span><span style="color: #0000ff">&gt;</span>
+                <span style="color: #0000ff">&lt;</span><span style="color: #800000">issuedTokenParameters</span> <span style="color: #ff0000">keyType</span><span style="color: #0000ff">=&quot;SymmetricKey&quot;</span> <span style="color: #ff0000">tokenType</span><span style="color: #0000ff">=&quot;http://docs.oasis-open.org/wss/oasis-wss-saml-token-profile-1.1#SAMLV1.1&quot;</span><span style="color: #0000ff">&gt;</span>
+                    <span style="color: #0000ff">&lt;</span><span style="color: #800000">issuer</span> <span style="color: #ff0000">address</span><span style="color: #0000ff">=&quot;http://notused&quot;</span> <span style="color: #ff0000">binding</span><span style="color: #0000ff">=&quot;wsHttpBinding&quot;</span> <span style="color: #0000ff">/&gt;</span>
+                    <span style="color: #0000ff">&lt;</span><span style="color: #800000">issuerMetadata</span> <span style="color: #ff0000">address</span><span style="color: #0000ff">=&quot;http://notused/mex&quot;</span> <span style="color: #0000ff">/&gt;</span>
+                <span style="color: #0000ff">&lt;/</span><span style="color: #800000">issuedTokenParameters</span><span style="color: #0000ff">&gt;</span>
+                <span style="color: #0000ff">&lt;</span><span style="color: #800000">localClientSettings</span> <span style="color: #ff0000">cacheCookies</span><span style="color: #0000ff">=&quot;true&quot;</span> <span style="color: #ff0000">detectReplays</span><span style="color: #0000ff">=&quot;true&quot;</span>
+                    <span style="color: #ff0000">replayCacheSize</span><span style="color: #0000ff">=&quot;900000&quot;</span> <span style="color: #ff0000">maxClockSkew</span><span style="color: #0000ff">=&quot;00:05:00&quot;</span> <span style="color: #ff0000">maxCookieCachingTime</span><span style="color: #0000ff">=&quot;Infinite&quot;</span>
+                    <span style="color: #ff0000">replayWindow</span><span style="color: #0000ff">=&quot;00:05:00&quot;</span> <span style="color: #ff0000">sessionKeyRenewalInterval</span><span style="color: #0000ff">=&quot;10:00:00&quot;</span>
+                    <span style="color: #ff0000">sessionKeyRolloverInterval</span><span style="color: #0000ff">=&quot;00:05:00&quot;</span> <span style="color: #ff0000">reconnectTransportOnFailure</span><span style="color: #0000ff">=&quot;true&quot;</span>
+                    <span style="color: #ff0000">timestampValidityDuration</span><span style="color: #0000ff">=&quot;00:05:00&quot;</span> <span style="color: #ff0000">cookieRenewalThresholdPercentage</span><span style="color: #0000ff">=&quot;60&quot;</span> <span style="color: #0000ff">/&gt;</span>
+                <span style="color: #0000ff">&lt;</span><span style="color: #800000">localServiceSettings</span> <span style="color: #ff0000">detectReplays</span><span style="color: #0000ff">=&quot;true&quot;</span> <span style="color: #ff0000">issuedCookieLifetime</span><span style="color: #0000ff">=&quot;10:00:00&quot;</span>
+                    <span style="color: #ff0000">maxStatefulNegotiations</span><span style="color: #0000ff">=&quot;128&quot;</span> <span style="color: #ff0000">replayCacheSize</span><span style="color: #0000ff">=&quot;900000&quot;</span> <span style="color: #ff0000">maxClockSkew</span><span style="color: #0000ff">=&quot;00:05:00&quot;</span>
+                    <span style="color: #ff0000">negotiationTimeout</span><span style="color: #0000ff">=&quot;00:01:00&quot;</span> <span style="color: #ff0000">replayWindow</span><span style="color: #0000ff">=&quot;00:05:00&quot;</span> <span style="color: #ff0000">inactivityTimeout</span><span style="color: #0000ff">=&quot;00:02:00&quot;</span>
+                    <span style="color: #ff0000">sessionKeyRenewalInterval</span><span style="color: #0000ff">=&quot;15:00:00&quot;</span> <span style="color: #ff0000">sessionKeyRolloverInterval</span><span style="color: #0000ff">=&quot;00:05:00&quot;</span>
+                    <span style="color: #ff0000">reconnectTransportOnFailure</span><span style="color: #0000ff">=&quot;true&quot;</span> <span style="color: #ff0000">maxPendingSessions</span><span style="color: #0000ff">=&quot;128&quot;</span>
+                    <span style="color: #ff0000">maxCachedCookies</span><span style="color: #0000ff">=&quot;1000&quot;</span> <span style="color: #ff0000">timestampValidityDuration</span><span style="color: #0000ff">=&quot;00:05:00&quot;</span> <span style="color: #0000ff">/&gt;</span>
+                <span style="color: #0000ff">&lt;</span><span style="color: #800000">secureConversationBootstrap</span> <span style="color: #0000ff">/&gt;</span>
+            <span style="color: #0000ff">&lt;/</span><span style="color: #800000">security</span><span style="color: #0000ff">&gt;</span>
+            <span style="color: #0000ff">&lt;</span><span style="color: #800000">textMessageEncoding</span> <span style="color: #ff0000">maxReadPoolSize</span><span style="color: #0000ff">=&quot;64&quot;</span> <span style="color: #ff0000">maxWritePoolSize</span><span style="color: #0000ff">=&quot;16&quot;</span>
+                <span style="color: #ff0000">messageVersion</span><span style="color: #0000ff">=&quot;Default&quot;</span> <span style="color: #ff0000">writeEncoding</span><span style="color: #0000ff">=&quot;utf-8&quot;</span><span style="color: #0000ff">&gt;</span>
+                <span style="color: #0000ff">&lt;</span><span style="color: #800000">readerQuotas</span> <span style="color: #ff0000">maxDepth</span><span style="color: #0000ff">=&quot;32&quot;</span> <span style="color: #ff0000">maxStringContentLength</span><span style="color: #0000ff">=&quot;8192&quot;</span> <span style="color: #ff0000">maxArrayLength</span><span style="color: #0000ff">=&quot;65536&quot;</span>
+                    <span style="color: #ff0000">maxBytesPerRead</span><span style="color: #0000ff">=&quot;4096&quot;</span> <span style="color: #ff0000">maxNameTableCharCount</span><span style="color: #0000ff">=&quot;16384&quot;</span> <span style="color: #0000ff">/&gt;</span>
+            <span style="color: #0000ff">&lt;/</span><span style="color: #800000">textMessageEncoding</span><span style="color: #0000ff">&gt;</span>
+            <span style="color: #0000ff">&lt;</span><span style="color: #800000">httpTransport</span> <span style="color: #ff0000">manualAddressing</span><span style="color: #0000ff">=&quot;false&quot;</span> <span style="color: #ff0000">maxBufferPoolSize</span><span style="color: #0000ff">=&quot;524288&quot;</span>
+                <span style="color: #ff0000">maxReceivedMessageSize</span><span style="color: #0000ff">=&quot;65536&quot;</span> <span style="color: #ff0000">allowCookies</span><span style="color: #0000ff">=&quot;false&quot;</span> <span style="color: #ff0000">authenticationScheme</span><span style="color: #0000ff">=&quot;Anonymous&quot;</span>
+                <span style="color: #ff0000">bypassProxyOnLocal</span><span style="color: #0000ff">=&quot;false&quot;</span> <span style="color: #ff0000">hostNameComparisonMode</span><span style="color: #0000ff">=&quot;StrongWildcard&quot;</span>
+                <span style="color: #ff0000">keepAliveEnabled</span><span style="color: #0000ff">=&quot;true&quot;</span> <span style="color: #ff0000">maxBufferSize</span><span style="color: #0000ff">=&quot;65536&quot;</span> <span style="color: #ff0000">proxyAuthenticationScheme</span><span style="color: #0000ff">=&quot;Anonymous&quot;</span>
+                <span style="color: #ff0000">realm</span><span style="color: #0000ff">=&quot;&quot;</span> <span style="color: #ff0000">transferMode</span><span style="color: #0000ff">=&quot;Buffered&quot;</span> <span style="color: #ff0000">unsafeConnectionNtlmAuthentication</span><span style="color: #0000ff">=&quot;false&quot;</span>
+                <span style="color: #ff0000">useDefaultWebProxy</span><span style="color: #0000ff">=&quot;true&quot;</span> <span style="color: #0000ff">/&gt;</span>
+        <span style="color: #0000ff">&lt;/</span><span style="color: #800000">binding</span><span style="color: #0000ff">&gt;</span>
+    <span style="color: #0000ff">&lt;/</span><span style="color: #800000">customBinding</span><span style="color: #0000ff">&gt;</span>
+<span style="color: #0000ff">&lt;/</span><span style="color: #800000">bindings</span><span style="color: #0000ff">&gt;</span></pre>
+</div>
+
+<p>On the service side we want to check that the token was issued by someone we trust. To do that, Zermatt provides something called <strong>SamlSecurityTokenRequirements </strong>(this code is somewhere in the host).&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; </p>
+
+<div>
+  <pre style="padding-right: 0px;padding-left: 0px;font-size: 8pt;padding-bottom: 0px;margin: 0em;width: 100%;color: black;padding-top: 0px;font-family: consolas, &#39;Courier New&#39;, courier, monospace">var handler = collection[<span style="color: #0000ff">typeof</span>(SamlSecurityToken)] <span style="color: #0000ff">as</span> Saml11TokenHandler;
+handler.SamlSecurityTokenRequirement.IssuerTokenAuthenticators.Clear();
+handler.SamlSecurityTokenRequirement.IssuerTokenAuthenticators.Add( 
+   <span style="color: #0000ff">new</span> X509SecurityTokenAuthenticator( 
+      <span style="color: #0000ff">new</span> TokenIssuerCertificateValidator(Constants.IssuerCertificateThumbprint)));   </pre>
+</div>
+
+<p>The <strong>TokenIssuerCertificateValidator</strong> derives from <strong>X509CertificateValidator</strong> which has a virtual method <strong>ValidateToken</strong>. The input parameter of this method is the certificate used to sign the token. The following code will check the thumbprint of the incoming token is the one we expect.</p>
+
+<div>
+  <pre style="padding-right: 0px;padding-left: 0px;font-size: 8pt;padding-bottom: 0px;margin: 0em;width: 100%;color: black;padding-top: 0px;font-family: consolas, &#39;Courier New&#39;, courier, monospace"><span style="color: #0000ff">public</span> <span style="color: #0000ff">override</span> <span style="color: #0000ff">void</span> Validate( X509Certificate2 incoming )
+{
+    <span style="color: #0000ff">if</span> ( incoming.Thumbprint != issuerCertificate.Thumbprint )
+    {
+        <span style="color: #0000ff">throw</span> <span style="color: #0000ff">new</span> SecurityTokenException( <span style="color: #006080">&quot;Issuer certificate validation failed&quot;</span> );
+    }
+}</pre>
+</div>
+
+<p>Since the service has the private key that allows decrypting the token, we can read the claims. Zermatt will populate the <strong>ClaimsPrincipal</strong> object that will be accessible from any place in the service pipeline. The <strong>WCF</strong> <strong>ServiceAuthorizationManager</strong> might be the place where you want to do check access using the <strong>ClaimsPrincipal</strong>.</p>
+
+<div>
+  <pre style="padding-right: 0px;padding-left: 0px;font-size: 8pt;padding-bottom: 0px;margin: 0em;width: 100%;color: black;padding-top: 0px;font-family: consolas, &#39;Courier New&#39;, courier, monospace">var identity = ClaimsPrincipal.Current.Identity <span style="color: #0000ff">as</span> IClaimsIdentity;
+identity.Claims...</pre>
+</div>
+
+<div>&#160;</div>
+
+<div>This is the end of the first post on Identity and Zermatt. Next one will be the passive client.</div>

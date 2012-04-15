@@ -1,0 +1,17 @@
+--- 
+layout: post
+title: "SaaS: Realization of Metadata Services"
+published: true
+meta: {}
+
+tags: 
+- Architecture
+- ASP.Net
+- CAB
+- Indigo
+- SaaS
+- VisualStudioTeamSystem
+type: post
+status: publish
+---
+<p class="MsoNormal">I&#226;&#8364;&#8482;m in the early stages of writing my thesis about SaaS. As   <br />part of this process I&#226;&#8364;&#8482;m reading loads of SaaS content. Mainly, I&#226;&#8364;&#8482;m monitoring <a href="http://blogs.msdn.com/gianpaolo">Gianpaolo Carraro</a> and <a href="http://blogs.msdn.com/fred_chong/default.aspx">Fred Chong</a> blogs (from    <br />the Microsoft Architect Strategy group) and a <a href="http://feeds.feedburner.com/SaasWeek">weekly SaaS newsletter</a>.</p>  <p class="MsoNormal"><a href="http://blogs.msdn.com/fred_chong/archive/2006/02/17/534633.aspx">SaaS is     <br />in its infancy</a> in terms of guidance and realization and as a result, my    <br />thesis outline consists of analyzing the state of the art and fulfills the architectural    <br />concepts by writing a reference implementation of Software as a Service using    <br />Microsoft technologies (WinFx, ASP.Net 2, etc.).</p>  <p class="MsoNormal">Fred and Gianpaolo wrote a great paper that has been   <br />published on MSDN about <a href="http://msdn.microsoft.com/architecture/learnmore/default.aspx?pull=/library/en-us/dnbda/html/ArchStratCtchLngTail.asp">architectural     <br />strategies for SaaS</a>.</p>  <p class="MsoNormal">The paper starts by talking about the business value proposition of SaaS. <b>Leveraging     <br />economy of scale and selling for the long tail are really attractive concepts</b>.</p>  <p>The other half of the paper examines architectural implications   <br />when adopting this model: <b>the SaaS maturity level, metadata services,     <br />multi-tenant and scale out</b> among other things.</p>  <p>This paper is a first approach on the subject and it introduces   <br />concepts like <i>Metadata Services</i> which I found one of the key challenges    <br />to fulfill in terms of guidance because it is a cross-cutting concern in SaaS    <br />architectures.</p>  <p class="MsoNormal"><b><a href="http://blogs.southworks.net/mwoloski/files/2008/06/meta1.png"><img height="821" alt="meta1" src="http://blogs.southworks.net/mwoloski/files/2008/06/meta1-thumb.png" width="485" border="0" /></a> </b>    <p></p> </p>  <p class="MsoNormal">The following is my first approach on how I would like to achieve   <br /><i>Metadata Services</i> using the Microsoft stack.</p>  <p class="MsoNormal"><a href="http://blogs.southworks.net/mwoloski/files/2008/06/meta2.png"><img height="387" alt="meta2" src="http://blogs.southworks.net/mwoloski/files/2008/06/meta2-thumb.png" width="505" border="0" /></a> </p>  <p class="MsoNormal">I would like to make a special comment on &#226;&#8364;&#339;<b>Extensions to     <br />the data model</b>&#226;&#8364;. In the previous months we, at <a href="http://www.southworks.net/">Southworks</a>, customized extensively the    <br />process template of <a href="http://msdn.microsoft.com/vstudio/teamsystem/">VSTS</a>    <br />to fit our needs. This customization has been really straightforward and it    <br />allowed tailoring our specific requirements not only for our SDLC but also on    <br />other business processes. That proved us that XML succeeded as a metadata    <br />language. The guys from VSTS did a great job by providing these <i>metadata     <br />services</i> and I would like to explore more the intrinsic of it.</p>

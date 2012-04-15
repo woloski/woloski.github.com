@@ -1,0 +1,152 @@
+--- 
+layout: post
+title: The holy grail of Enterprise SOA security
+published: true
+meta: {}
+
+tags: 
+- Architecture
+- Indigo
+- SaaS
+- ServiceFactory
+type: post
+status: publish
+---
+<p>A couple of years ago, the platform was not rich enough to create complex security solutions for service oriented applications based on standards. WSE was a half way path. With the advent of WCF we finally have a foundation to build a security subsystem flexible and robust for the enterprise.</p>  <p>The following illustration shows the different components involved and how they interact between each other.</p>  <p><a href="http://blogs.southworks.net/mwoloski/files/2008/06/soa.jpg"><img height="304" alt="soa" src="http://blogs.southworks.net/mwoloski/files/2008/06/soa-thumb.jpg" width="496" border="0" /></a> </p>  <p>Most of enterprise line of business apps have used a login to authenticate their users and roles to authorize them. When webservices were not there, the business logic was hosted in the application itself and advanced users hosted in COM+. The authentication and access checks were mixed in the same code that performed the business logic. Sometime later enterprises started to realize that integration between applications was getting harder: SOA implemented with webservices came to the rescue.</p>  <p>Now, the business logic lived in the application server and was accessed through webservices. The problem became to &quot;how can I secure my services?&quot;. I've seen many different implementations: using kerberos, using custom tickets, certificates, etc. However they were coupled to the platform or they were custom solutions. Single sign on and access check across applications of different platform is hard to accomplish: WS-Trust, STS and SAML comes to the rescue.</p>  <p>Let's describe the scenario:</p>  <p>1. A user browses to Login.aspx, enters his username and password and click &quot;Login&quot;. As this is the only time when we have username and password available from the user, we can fill the UserName token on the proxy. We call a Ping service which is just a dummy service that we use to obtain a SamlToken.</p>  <pre><span class="kwrd">using</span> (SystemServiceChannel channel = <span class="kwrd">new</span> SystemServiceChannel())
+{
+    channel.ClientCredentials.UserName.UserName = LoginControl.UserName;
+    channel.ClientCredentials.UserName.Password = LoginControl.Password;
+    channel.Ping();
+}</pre>
+
+<p>2. The client endpoint is configured to use wsFederationHttpBinding and the issuer of the token is the Authorization STS. Since the client does not have a SamlToken yet, it will send the UserName token to the Authorization STS so he can issue one. Below is the binding.</p>
+
+<pre><span class="kwrd">&lt;</span><span class="html">binding</span> <span class="attr">name</span><span class="kwrd">=&quot;SecureConversationBinding&quot;</span><span class="kwrd">&gt;</span>
+  <span class="kwrd">&lt;</span><span class="html">security</span> <span class="attr">mode</span><span class="kwrd">=&quot;Message&quot;</span><span class="kwrd">&gt;</span>
+    <span class="kwrd">&lt;</span><span class="html">message</span> <span class="attr">issuedKeyType</span><span class="kwrd">=&quot;SymmetricKey&quot;</span> <br />
+             <span class="attr">issuedTokenType</span><span class="kwrd">=&quot;http://....saml-token-profile-1.1#SAMLV1.1&quot;</span><span class="kwrd">&gt;</span>
+      <span class="kwrd">&lt;</span><span class="html">issuer</span> <span class="attr">address</span><span class="kwrd">=&quot;http://services.litwarehr.com/Authz/STS.svc&quot;</span>
+        <span class="attr">binding</span><span class="kwrd">=&quot;wsFederationHttpBinding&quot;</span> <span class="attr">bindingConfiguration</span><span class="kwrd">=&quot;AuthorizationSTS&quot;</span><span class="kwrd">&gt;</span>
+        <span class="kwrd">&lt;</span><span class="html">identity</span><span class="kwrd">&gt;</span>
+          <span class="kwrd">&lt;</span><span class="html">dns</span> <span class="attr">value</span><span class="kwrd">=&quot;SaasyLongTailCert&quot;</span> <span class="kwrd">/&gt;</span>
+        <span class="kwrd">&lt;/</span><span class="html">identity</span><span class="kwrd">&gt;</span>
+      <span class="kwrd">&lt;/</span><span class="html">issuer</span><span class="kwrd">&gt;</span>
+    <span class="kwrd">&lt;/</span><span class="html">message</span><span class="kwrd">&gt;</span>
+  <span class="kwrd">&lt;/</span><span class="html">security</span><span class="kwrd">&gt;</span></pre>
+
+<p>3.&#160; The Authorization STS trust on the Authentication STS and request him a SamlToken. The Authentication STS message security is configured to use wsHttpBinding with UserName token.</p>
+
+<pre><span class="kwrd">&lt;</span><span class="html">binding</span> <span class="attr">name</span><span class="kwrd">=&quot;AuthorizationSTS&quot;</span><span class="kwrd">&gt;</span>
+  <span class="kwrd">&lt;</span><span class="html">security</span> <span class="attr">mode</span><span class="kwrd">=&quot;Message&quot;</span><span class="kwrd">&gt;</span>
+    <span class="kwrd">&lt;</span><span class="html">message</span> <span class="attr">issuedKeyType</span><span class="kwrd">=&quot;SymmetricKey&quot;</span> 
+                     <span class="attr">issuedTokenType</span><span class="kwrd">=&quot;http://...-saml-token-profile-1.1#SAMLV1.1&quot;</span><span class="kwrd">&gt;</span>
+      <span class="kwrd">&lt;</span><span class="html">issuer</span> <span class="attr">address</span><span class="kwrd">=&quot;http://services.litwarehr.com/Auth/Sts.svc&quot;</span>
+        <span class="attr">binding</span><span class="kwrd">=&quot;wsHttpBinding&quot;</span> <span class="attr">bindingConfiguration</span><span class="kwrd">=&quot;AuthenticationSTS&quot;</span><span class="kwrd">&gt;</span>
+        <span class="kwrd">&lt;</span><span class="html">identity</span><span class="kwrd">&gt;</span>
+          <span class="kwrd">&lt;</span><span class="html">dns</span> <span class="attr">value</span><span class="kwrd">=&quot;SaasyLongTailCert&quot;</span> <span class="kwrd">/&gt;</span>
+        <span class="kwrd">&lt;/</span><span class="html">identity</span><span class="kwrd">&gt;</span>
+      <span class="kwrd">&lt;/</span><span class="html">issuer</span><span class="kwrd">&gt;</span>
+    <span class="kwrd">&lt;/</span><span class="html">message</span><span class="kwrd">&gt;</span>
+  <span class="kwrd">&lt;/</span><span class="html">security</span><span class="kwrd">&gt;</span>
+<span class="kwrd">&lt;/</span><span class="html">binding</span><span class="kwrd">&gt;</span></pre>
+
+<pre><span class="kwrd">&lt;</span><span class="html">binding</span> <span class="attr">name</span><span class="kwrd">=&quot;AuthenticationSTS&quot;</span><span class="kwrd">&gt;</span>
+  <span class="kwrd">&lt;</span><span class="html">security</span> <span class="attr">mode</span><span class="kwrd">=&quot;Message&quot;</span><span class="kwrd">&gt;</span>
+    <span class="kwrd">&lt;</span><span class="html">message</span> <span class="attr">clientCredentialType</span><span class="kwrd">=&quot;UserName&quot;</span> 
+                     <span class="attr">negotiateServiceCredential</span><span class="kwrd">=&quot;true&quot;</span>
+                     <span class="attr">establishSecurityContext</span><span class="kwrd">=&quot;false&quot;</span> <span class="kwrd">/&gt;</span>
+  <span class="kwrd">&lt;/</span><span class="html">security</span><span class="kwrd">&gt;</span>
+<span class="kwrd">&lt;/</span><span class="html">binding</span><span class="kwrd">&gt;</span></pre>
+
+<p>4. The Authentication STS service has a custom UserName Password validator behavior configured. Before the request actually gets to the STS it will go through the username/password validation. <a href="http://www.codeplex.com/LitwareHR">LitwareHr</a> default implementation uses <a href="http://www.microsoft.com/downloads/details.aspx?FamilyId=9688F8B9-1034-4EF6-A3E5-2A2A57B5C8E4&amp;displaylang=en">ADAM</a>.</p>
+
+<pre><span class="kwrd">&lt;</span><span class="html">serviceBehaviors</span><span class="kwrd">&gt;</span>
+   <span class="kwrd">&lt;</span><span class="html">behavior</span> <span class="attr">name</span><span class="kwrd">=&quot;AuthenticationSTS&quot;</span><span class="kwrd">&gt;</span>
+      <span class="kwrd">&lt;</span><span class="html">serviceCredentials</span><span class="kwrd">&gt;</span>
+        <span class="kwrd">&lt;</span><span class="html">userNameAuthentication</span> 
+<span class="attr">userNamePasswordValidationMode</span><span class="kwrd">=&quot;Custom&quot;</span> 
+<span class="attr">customUserNamePasswordValidatorType</span><span class="kwrd">=&quot;CustomValidator, Sts&quot;</span><span class="kwrd">/&gt;</span>
+       <span class="kwrd">&lt;/</span><span class="html">serviceCredentials</span><span class="kwrd">&gt;</span>
+   <span class="kwrd">&lt;/</span><span class="html">behavior</span><span class="kwrd">&gt;</span>
+<span class="kwrd">&lt;/</span><span class="html">serviceBehaviors</span><span class="kwrd">&gt;</span></pre>
+
+<p>5. If the authentication was succesful , the Authentication STS will issue a basic SamlToken containing the identity name of the caller.</p>
+
+<pre>Collection GetIssuedClaims(RequestSecurityToken rst)
+{
+    <span class="kwrd">string</span> caller = ServiceSecurityContext.Current.PrimaryIdentity.Name;
+    Collection samlAttributes = 
+                    <span class="kwrd">new</span> Collection();
+    samlAttributes.Add(
+        <span class="kwrd">new</span> SamlAttribute(
+        <span class="kwrd">new</span> Claim(ClaimTypes.Authentication, 
+                  caller, 
+                  Rights.PossessProperty)));
+
+    <span class="kwrd">return</span> samlAttributes;
+}</pre>
+
+<p>6. Since the Authorization STS trusts on the SamlTokens issued by the Authentication STS, it will grab the token, extract the username claim and retrieve the actions available for the user. This happens in the <a href="http://msdn2.microsoft.com/en-us/system.identitymodel.policy.iauthorizationpolicy.aspx">IAuthorizationPolcy</a> configured on the STS.</p>
+
+<pre><span class="kwrd">public</span> <span class="kwrd">bool</span> Evaluate(EvaluationContext evaluationContext, <span class="kwrd">ref</span> <span class="kwrd">object</span> state)
+{
+    <span class="rem">// check if this context was updated for this user</span>
+    <span class="kwrd">if</span> (state == <span class="kwrd">null</span>)
+    {
+        <span class="rem">// Create an empty list of Claims</span>
+        IList claims = <span class="kwrd">new</span> List();
+        <span class="rem">// Add list of actions the user can perform</span>
+        <span class="kwrd">string</span> user = GetUserFromClaimSets(evaluationContext.ClaimSets);
+        <span class="kwrd">foreach</span> (<span class="kwrd">string</span> action <span class="kwrd">in</span> GetActionsForUser(user))
+        {
+            claims.Add(<span class="kwrd">new</span> Claim(
+                    ClaimTypes.AuthorizationDecision, 
+                    action, 
+                    Rights.PossessProperty));
+        }
+        ...
+     }
+}</pre>
+
+<p>7. The SamlToken enriched now is ready to go through the service pipeline.</p>
+
+<p>8. This is where the access check happens. The <a href="http://msdn2.microsoft.com/en-us/system.servicemodel.serviceauthorizationmanager.aspx">ServiceAuthorizationManager</a> class has access to the <a href="http://msdn2.microsoft.com/en-us/system.identitymodel.policy.authorizationcontext.aspx">AuthorizationContext</a> which exposes the SamlToken with the claims.</p>
+
+<pre><span class="kwrd">public</span> <span class="kwrd">override</span> <span class="kwrd">bool</span> CheckAccess(OperationContext operationContext)
+{
+    <span class="rem">// Extract the AuthorizationContext from the ServiceSecurityContext</span>
+    AuthorizationContext authContext = 
+        operationContext.ServiceSecurityContext.AuthorizationContext;
+
+    <span class="rem">// Guard denies exectuion if the action is not in the token as a claim</span>
+<strong>    <span class="kwrd">string</span> action = operationContext.IncomingMessageHeaders.Action;
+</strong>    IEnumerable authorizationDecisionClaims = 
+<strong>        claimSet.FindClaims(ClaimTypes.AuthorizationDecision, Rights.PossessProperty);
+</strong>
+    <span class="kwrd">foreach</span> (Claim claim <span class="kwrd">in</span> authorizationDecisionClaims)
+    {
+        <span class="kwrd">string</span> authzAction = claim.Resource <span class="kwrd">as</span> <span class="kwrd">string</span>;
+        <span class="kwrd">if</span> (!<span class="kwrd">string</span>.IsNullOrEmpty(authzAction) &amp;&amp;
+            authzAction.Equals(action, 
+                              StringComparison.InvariantCultureIgnoreCase))
+        {
+            <span class="kwrd">return</span> <span class="kwrd">true</span>;
+        }
+    }
+
+    <span class="rem">// If no AuthorizationDecision claim had a resource value that matched the </span>
+    <span class="rem">// current action name, return false (Access Denied)</span>
+    <span class="kwrd">return</span> <span class="kwrd">false</span>;
+}</pre>
+
+<p>9. Finally, the SOAP message gets to the service implementation and the response is sent back to the client with the SamlToken attached.</p>
+
+<p>10. The SamlToken is cached on the client using an HTTP cookie. This is achieved by using a custom <a href="http://msdn2.microsoft.com/en-gb/library/system.servicemodel.security.tokens.issuedsecuritytokenprovider.aspx">IssuedSecurityTokenProvider</a>.</p>
+
+<h3><strong>Conclusion and a bit of SaaS</strong></h3>
+
+<p>WCF provides an extensible foundation that allow taking the service oriented on the enterprise to the next level using standards like WS-Trust and SAML.</p>
+
+<p>Since SOA is part of the deal for Software as a Service apps we implemented this architecture on <a href="http://www.codeplex.com/LitwareHR">LitwareHR</a> to get ready for future scenarios like Federated Security. In this scenario the tenant wants to manage authentication and authorization using its own infrastructure. He owns an STS that issues SamlTokens for every app in the enterprise and the IT guys don't want to manage yet another user/password. The SaaS provider (LitwareHR) will allow the tenant to configure the claims mapping and the tenant STS to rely on. By doing this, the IT administrator for Contoso (the tenant) will manage a single authorization store and will configure the claim mappings on the &quot;cloud&quot; apps: the &quot;Administrator&quot; role in my enterprise is the &quot;ConfigureAndCustomize&quot; role in the SaaS application.</p>
+
+<p>If you want to see a working implementation of the scenario described in the figure above download <a href="http://www.codeplex.com/LitwareHR/Release/ProjectReleases.aspx" target="_blank">LitwareHr Software as a Service sample application</a> and look for <strong>Shp.Security.BrokeredReceiver</strong> and <strong>Shp.Security.BrokeredSender</strong> projects. If you are taking SOA seriously, then it might worths looking at it.</p>

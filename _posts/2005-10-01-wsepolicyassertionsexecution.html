@@ -1,0 +1,33 @@
+--- 
+layout: post
+title: WSE Policy Assertions Execution Order analysis
+published: true
+meta: {}
+
+tags: 
+- WSE
+type: post
+status: publish
+---
+<p>I've been playing with <a href="http://msdn.microsoft.com/webservices/webservices/building/wse/default.aspx">WSE 3</a> because I wanted to fully understand how Policy Assertions, SoapFilters and the Pipeline work. My tools were: <a href="http://www.aisto.com/roeder/dotnet/">Reflector </a>and a test harness example consisting of a custom Policy Assertion that creates a SoapFilter that logs to an xml file. <span style="font-style: italic">Note: I've used WSE 3.0.5152 which is the June CTP because I was using VS 2005 Beta 2.</span></p>  <p>I recommend you reading <a href="http://mtaulty.com/blog/%28b4y2pj45yw53gq55jfb5sq45%29/archive/2005/06/27/2847.aspx">this post</a> from <a href="http://mtaulty.com/blog/">Mike Taulty</a> so we are all on the same page.</p>  <p>My tests:</p>  <ol>   <li>The normal execution flow </li>    <li>What happens when an Exception is being thrown from the webservice? </li>    <li>What happens when an Exception is being thrown from a SoapFilter? </li>    <li>Short-circuitingon client-output, client-input, service-input and service-output </li> </ol>  <p>I've created some nice drawings to illustrates what is happening in each case. So here we go...</p>  <p><a href="http://blogs.southworks.net/mwoloski/files/2008/06/wsep1.jpg"><img height="307" alt="wsep1" src="http://blogs.southworks.net/mwoloski/files/2008/06/wsep1-thumb.jpg" width="494" border="0" /></a> </p>  <p><a href="http://blogs.southworks.net/mwoloski/files/2008/06/wsep2.jpg"><img height="382" alt="wsep2" src="http://blogs.southworks.net/mwoloski/files/2008/06/wsep2-thumb.jpg" width="493" border="0" /></a> </p>  <p><a href="http://blogs.southworks.net/mwoloski/files/2008/06/wsep3.jpg"><img height="384" alt="wsep3" src="http://blogs.southworks.net/mwoloski/files/2008/06/wsep3-thumb.jpg" width="498" border="0" /></a> </p>  <p><a href="http://blogs.southworks.net/mwoloski/files/2008/06/wsep4.jpg"><img height="386" alt="wsep4" src="http://blogs.southworks.net/mwoloski/files/2008/06/wsep4-thumb.jpg" width="501" border="0" /></a> </p>  <p>Here&#160; I decided to go with reflector because the short-circuiting   <br />was not behaving as I expected, so I found the ProcessInputMessage and    <br />ProcessOutputMessage from the Pipeline class.</p>  <p><i><b>ProcessOutputMessage</b></i></p>  <p><!-- code formatted by http://manoli.net/csharpformat/ --></p>  <pre> <span class="kwrd">using</span> (IEnumerator enumerator1 = ((IEnumerator) <span class="kwrd">this</span>.outputFilters.GetEnumerator()))<br />            {<br />                  <span class="kwrd">while</span> (enumerator1.MoveNext())<br />                  {<br />                        SoapFilter filter1 = enumerator1.get_Current();<br />                        SoapFilterResult result1 = filter1.ProcessMessage(envelope);<br />                        <span class="kwrd">if</span> (result1 == <span class="kwrd">null</span>)<br />                        {<br />                              <span class="kwrd">throw</span> <span class="kwrd">new</span> InvalidOperationException(<span class="kwrd">string</span>.Format(<span class="str">&quot;SoapFilter of type '{0}' did not return a valid result from ProcessMessage&quot;</span>, filter1.GetType().ToString()));<br />                        }<br />                        <span class="kwrd">if</span> (result1.Stop)<br />                        {<br />                              flag1 = <span class="kwrd">false</span>;<br />                              <span class="kwrd">goto</span> Label_014A;<br />                        }<br />                  }<br />            }</pre>
+
+<p><i><b>
+      <br />ProcessInputMessage</b></i></p>
+
+<p><!-- code formatted by http://manoli.net/csharpformat/ --></p>
+
+<pre><span class="kwrd">using</span> (IEnumerator enumerator1 = ((IEnumerator) <span class="kwrd">this</span>.inputFilters.GetEnumerator()))<br />            {<br />                  <span class="kwrd">while</span> (enumerator1.MoveNext())<br />                  {<br />                        SoapFilter filter1 = enumerator1.get_Current();<br />                        SoapFilterResult result1 = filter1.ProcessMessage(envelope);<br />                        <span class="kwrd">if</span> (result1 == <span class="kwrd">null</span>)<br />                        {<br />                              <span class="kwrd">throw</span> <span class="kwrd">new</span> InvalidOperationException(<span class="kwrd">string</span>.Format(<span class="str">&quot;SoapFilter of type '{0}' did not return a valid result from ProcessMessage&quot;</span>, filter1.GetType().ToString()));<br />                        }<br />                        <span class="kwrd">if</span> (result1.TargetMethod != <span class="kwrd">null</span>)<br />                        {<br />                              method1 = result1.TargetMethod;<br />                              <span class="kwrd">goto</span> Label_012A;<br />                        }<br />                  }<br />            }</pre>
+
+<p>Note that both methods are using either on the client-side and the service-side. What attracted my attention was that <u>ProcessInputMessage doesn't analyze the result whether is Continue or Stop</u>.
+
+  <br />So I would not be able to do any short circuiting when messages get
+
+  <br />into the service or the client. A very common use of this is doing
+
+  <br />idempotent where I check the message id and reply with a already
+
+  <br />processed message stored in a cache.</p>
+
+<p>Am I missing something here?</p>
+
+<p>Anyway, I will try again when WSE gets out on November.</p>

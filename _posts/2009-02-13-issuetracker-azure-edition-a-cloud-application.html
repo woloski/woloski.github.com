@@ -1,0 +1,21 @@
+--- 
+layout: post
+title: IssueTracker Azure Edition - a Cloud Application
+published: true
+meta: {}
+
+tags: 
+- ASP.Net
+- Azure
+- Cloud Computing
+- Federation
+- Geneva
+- Identity
+- LiveID
+- MVC
+- PDC08
+- WCF
+type: post
+status: publish
+---
+<p>Couple of weeks ago <a href="http://dunnry.com/blog/AzureIssueTrackerReleased.aspx">Ryan Dunn announced</a> <a href="http://www.codeplex.com/azureissuetracker">Azure Issue Tracker</a>. From this post:</p>  <p><em>&quot;This sample application is a simple issue tracking service and website that pulls together a couple of the Azure services:&#160; <strong>SQL Data Services</strong> and <strong>.NET Access Control Service</strong>.&quot;<a href="http://blogs.southworks.net/mwoloski/files/2009/02/windowslivewriterissuetrackerazureeditionacloudapplicatio-f4dcimage-2.png"><img height="238" alt="image" src="http://blogs.southworks.net/mwoloski/files/2009/02/windowslivewriterissuetrackerazureeditionacloudapplicatio-f4dcimage-thumb.png" width="284" align="right" border="0" /></a></em></p>  <p>I've been working with Ryan and other guys at DPE and <a href="http://blogs.southworks.net">Southworks</a> to put together this sample before PDC. With all the back and&#160; forth (the .NET services were not working as reliable as they work now) we were not able to pull it through at that time. Well, it's now live and you can download the source code. Some of its features:</p>  <ul>   <li>[Identity] .NET Services Access Control as a relying party and claims transformation STS</li>    <li>[Identity] Federation against LiveID and claim mapping between email -&gt; tasks. I hinted the implementation in <a href="http://blogs.southworks.net/mwoloski/2008/11/09/azure-services-platform-passive-federation-access-control-2/">these</a> <a href="http://blogs.southworks.net/mwoloski/2008/11/07/azure-services-platform-passive-federation-access-control-1/">post</a>.</li>    <li>[Identity] Claims aware application and service layer (by doing identity delegation with ActAs)</li>    <li>[Data] Storage on SDS using the flexible schema to extend the data model of the issue</li>    <li>[General] Multi tenancy at all levels (identity, data, programming model)</li>    <li>[General] Clean separation of concerns using ASP.NET MVC, Geneva Framework, WCF and WF.</li> </ul>  <p>This is the standard edition. The enterprise edition is coming with features related to manageability (Management API, Powershell CmdLets, MMC, SCOM, etc.) and identity federations against third party STS. Stay tuned!</p>  <p><a href="http://www.codeplex.com/azureissuetracker/Release/ProjectReleases.aspx?ReleaseId=22138">Download the code</a></p>

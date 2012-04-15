@@ -1,0 +1,54 @@
+--- 
+layout: post
+title: ClickOnce, MSBuild and CAB
+published: true
+meta: {}
+
+tags: 
+- CAB
+- ClickOnce
+- MSBuild
+type: post
+status: publish
+---
+
+        <p class="MsoNormal">Lately, I've been wondering about the strength of <a href="http://blog.gatosoft.com/ct.ashx?id=d0a0dd1e-c9ac-4fa9-a408-615454d49702&amp;url=http%3a%2f%2fmsdn2.microsoft.com%2fen-us%2flibrary%2ft71a733d.aspx">ClickOnce</a>
+applied in enterprise applications. In these scenarios, the deployment of a
+Smart Client application involves more than a simple XCOPY. Let's enumerate
+some of them:</p>
+
+
+<ul type="disc">
+<li class="MsoNormal">multiple environments (dev,
+     qa, staging, production)</li><li class="MsoNormal">prerequisites</li><li class="MsoNormal">CAS permissions</li><li class="MsoNormal">run as non-admin</li><li class="MsoNormal">pre and post-deployment
+     tasks</li><li class="MsoNormal">partial deploys (only a set
+     of modules)</li><li class="MsoNormal">rollbacks</li><li class="MsoNormal">segmented deploy (e.g. only
+     deploy a beta testers group)</li><li class="MsoNormal">versioning</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+<p class="MsoNormal">The truth is that ClickOnce has been designed with some of
+these things in mind out of the box but not all of them. Fortunately the ClickOnce
+world does not finish in the â€œVisual Studio 2005 Publish tabâ€. <span> </span>We have <a href="http://msdn2.microsoft.com/en-us/library/6wc2ccdc.aspx">MSBuild</a>
+<a href="http://msdn2.microsoft.com/en-us/library/3k2t34e7%28VS.80%29.aspx">tasks</a>,
+<a href="http://msdn2.microsoft.com/en-us/library/xc3tc5xx.aspx">mage.exe</a>
+and <a href="http://msdn2.microsoft.com/en-us/library/xc3tc5xx.aspx">mageui.exe</a>
+to overcome the advanced scenarios.<br>
+A <a href="http://blog.gatosoft.com/PermaLink,guid,d0a0dd1e-c9ac-4fa9-a408-615454d49702.aspx">great
+sample</a> showing the advanced features has been written by <a href="http://blog.gatosoft.com/default.aspx">Mike Bouck</a>.<br>
+</p>
+<p class="MsoNormal">Based on this and my previous post about <a href="posteditor.aspx?App=matiaswoloski&amp;PostID=238">dynamic
+modules</a>, Iâ€™m planning to write a sample consisting of a <a href="http://codegallery.gotdotnet.com/cab">CAB</a> application leveraging <a href="http://blog.gatosoft.com/ct.ashx?id=d0a0dd1e-c9ac-4fa9-a408-615454d49702&amp;url=http%3a%2f%2fmsdn2.microsoft.com%2fen-us%2flibrary%2ft71a733d.aspx">ClickOnce</a>
+and <a href="http://codegallery.gotdotnet.com/cab">CAB</a> Module Loader to download
+modules on-demand and load them dynamically.</p>
+
+
+      

@@ -1,0 +1,19 @@
+--- 
+layout: post
+title: "Claims based Authentication and Authorization: The Guide"
+published: true
+meta: {}
+
+tags: 
+- ADFS
+- Claim-Based Identity
+- Federation
+- Geneva
+- Geneva Server
+- Identity
+- Identity Management
+- Windows Identity Foundation
+type: post
+status: publish
+---
+<p><a href="http://blogs.msdn.com/eugeniop/archive/2009/08/11/announcing-new-project-patterns-practices-claims-based-authentication-authorization-guide.aspx">Eugenio announced yesterday</a> the kickoff of a new guide from patterns &amp; practices in which I’m collaborating: <strong>Claims based Authentication &amp; Authorization Guide</strong>.</p>  <p>This is not a new topic as Eugenio suggests in his blog, but it’s getting more and more attention because:</p>  <ul>   <li>Technology is more mature, hence it’s easier to implement claim-based identity </li>    <li>Enterprises are failing to control the amount of different identity repositories, leading to higher provisioning/deprovisioning costs, security problems, etc. </li>    <li>End users want simpler user experiences and less passwords</li>    <li>The cloud makes all these even more challenging</li> </ul>  <p>We started with this project a couple of weeks ago planning the content. The approach we decided to use was heavily driven by scenarios (aka zero bulls**t). We used the visual metaphor of a tube map with scenarios being the stations separated in two main lines: </p>  <ul>   <li>The<font color="#70cde8"> <strong>blue one</strong></font>, the <strong>Enterprise track </strong>approaches the federated identity problem from the point of view of a company with many applications that wants to implement SSO and Federation. The main stations are SSO (within the enterprise), Federation (with partners), SOAP Web Services (and flow of identity across services), SSO with a third party cloud app and some variations like: what if the company decides to host an application on the cloud (namely Windows Azure); or what if the company needs to integrate with an application that talks SAML protocol (i.e. Salesforce, Google Apps)</li>    <li>The <font color="#e7e496"><strong>yellow one</strong></font>, <strong>ISV track </strong>on the other hand tackle the problem from the perspective of an ISV that wants to offer an application as a service (think about Salesforce or Dynamics CRM Online as the canonical examples). In this track we start by explaining how to implement federated identity for a cloud application. Then we show how to automate federation to on board new customers. We also show things like exposing a REST API and how that plays with claims; how to integrate with LiveID (or OpenID) for small customers that don’t have an Identity Provider in place; and we end up explaining how to do auditing/billing with claims.</li> </ul>  <p><a href="http://blogs.southworks.net/mwoloski/files/2009/08/image.png"><img border="0" alt="image" src="http://blogs.southworks.net/mwoloski/files/2009/08/image-thumb.png" width="720" height="570" /></a></p>  <p>I’m very proud and excited about being part of such a great team including: <a href="http://www.leastprivilege.com/">Dominick Baier</a>, <a href="http://blogs.msdn.com/vbertocci/">Vittorio Bertocci</a>, <a href="http://www.pluralsight.com/community/blogs/keith/default.aspx">Keith Brown</a>, <a href="http://blogs.msdn.com/dphill/default.aspx">David Hill</a> and <a href="http://blogs.msdn.com/eugeniop">Eugenio Pace</a>. I’m sure that something great will come up from this team, the board of reviewers and the community that will help to prioritize and keep the focus!</p>

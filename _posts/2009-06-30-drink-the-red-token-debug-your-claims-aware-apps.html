@@ -1,0 +1,13 @@
+--- 
+layout: post
+title: "Drink the red token \xE2\x80\x93 debug your claims-aware apps"
+published: true
+meta: {}
+
+tags: 
+- Geneva
+- Identity
+type: post
+status: publish
+---
+<p>Another identity development widget brought to you by <a href="http://blogs.msdn.com/vbertocci">Vittorio’s</a> team. This time it’s a very tiny control called <a href="http://blogs.southworks.net/mwoloski/files/2009/06/clip-image002.jpg"><img style="margin-left: 0px;margin-right: 0px" border="0" hspace="12" alt="clip_image002" align="right" src="http://blogs.southworks.net/mwoloski/files/2009/06/clip-image002-thumb.jpg" width="46" height="61" /></a><b>SecurityTokenVisualizer</b> that helps debugging claims-aware web applications. But the thing I like of this control is that it can also be used as a teaching tool, very useful for demos by the way. Last week we “dogfooded” it during the Iteration Review of an identity-related project and the audience made the click when we expanded the red small pentagon that shows the behind the scenes. </p>  <p>Simply drag and drop the control on any page and it will render a collapsible table with</p>  <ul>   <li>Issued Identity claims</li>    <li>Delegated Identity claims</li>    <li>The raw SAML token (in a textarea)</li>    <li>The SAML token properties (validfrom, validto, audience, signing certificate, etc.)</li>    <li>The certificate used for token decryption</li> </ul>  <p>As usual, read the details on <a href="http://blogs.msdn.com/vbertocci/archive/2009/06/29/i-made-you-a-token-but-i-eated-it-or-how-to-debug-authentication-issues-in-asp-net-with-securitytokenvisualizercontrol.aspx">Vittorio’s blog</a>.</p>

@@ -1,0 +1,131 @@
+--- 
+layout: post
+title: "FabrikamShipping: the provisioning machinery built with Windows Azure"
+published: true
+meta: 
+  _edit_last: "24"
+  _edit_lock: "1288612018"
+  _wp_old_slug: ""
+  _syntaxhighlighter_encoded: "1"
+tags: 
+- Access Control Service
+- Azure
+- Emerging Technology
+- FabrikamShipping
+- Provisioning
+type: post
+status: publish
+---
+This is a series of posts, read the <a href="http://blogs.southworks.net/mwoloski/2010/10/11/fabrikamshipping-saas-application-built-on-top-of-windows-azure/">introduction</a> to <a href="http://www.fabrikamshipping.com">FabrikamShipping</a> for more information about this sample application and <a href="http://blogs.msdn.com/b/vbertocci/">Vittorio’s blog</a> for latest updates.
+
+One of the first challenges we had to solve in <a href="http://www.fabrikamshipping.com">FabrikamShipping</a> was the provisioning/on boarding of new customers. If you look at <a href="https://fabrikamshipping.cloudapp.net">FabrikamShipping subscription page</a> you can see there are 3 different subscription types: Personal, Small Business and Enterprise. Each subscription type consists of different input, output and processing steps. However, there are aspects that are shared between them, for instance sending an email to the customer when we’re done, create the subscription info, create rules in Access Control Service, etc.
+
+We wanted to have something lightweight that could run in a Windows Azure worker role waiting for queue messages and perform a set of tasks. Keep reading to understand what this is about….
+<h2>Provisioning API</h2>
+With those things in mind we wanted a Provisioning API would allow us:
+<ul>
+	<li>to define different type of provisioning flows (ie: small biz has a different provisioning workflow compared to enterprise)</li>
+	<li>to handle manual steps (for things that don’t have an API)</li>
+	<li>to compensate in case of failure</li>
+	<li>to retry a failed provisioning</li>
+</ul>
+On the non-functional side we wanted:
+<ul>
+	<li>Reusability and composability of tasks between the different workflows</li>
+	<li>Resiliency</li>
+	<li>Nice DX (developer experience)</li>
+	<li>Testability</li>
+</ul>
+With that in mind and based on previous experiences in <a href="http://code.msdn.microsoft.com/BidNowSample">BidNow</a> and the <a href="http://msdn.microsoft.com/en-us/library/ff966483.aspx">patterns &amp; practices cloud guide</a>, we sketched the following API:
+<pre class="brush: csharp;">Task.TriggeredBy(Message.In("deploy-queue"))
+    .Do(
+        new CreateSelfSignedCert(),
+        new CreateSqlAzureDb(),
+        new ConfigurePackageAndMetadata(),
+        new SetupFederation(),
+        new DeployApp() });</pre>
+Which in essence is:
+<pre class="brush: csharp;">Task.TriggeredBy(() =&gt; condition)
+    .Do(params ICommand[] commands)</pre>
+<div>And allow us to define time based conditions like</div>
+<pre class="brush: csharp;">Task.TriggeredBy(Schedule.Every(30 * 1000))
+    .Do(...);</pre>
+<div>After a couple of days we had a prototype working and this is what you can find today in the <a href="http://www.fabrikamshipping.com/">FabrikamShipping source code</a>.</div>
+<pre class="brush: csharp;">Task.TriggeredBy(Message.OfType&lt;SmallBizProvisioningMessage&gt;(new AzureQueue(account)))
+    .SetupContext((message, context) =&gt;
+    {
+        context.Add("TenantAlias", message.CompanyAlias);
+        context.Add("SubscriptionId", message.SubscriptionId);
+        context.Add("SmallBizApplicationUrl", smallBizApplicationUrl);
+        context.Add("DatabaseName", "fs-" + message.CompanyAlias);
+    })
+    .Do(
+        new UpdateSubscriptionStatus(...),
+        new CreateSigningCertificate(...),
+        new CreateSqlAzureDb(...),
+        new CreateSqlAzureDb(...),
+        new CreateUsers(...),
+        new ConfigureTrustRelationshipForSmallBiz(...),
+        new UploadTenantMetadata(...),
+        new NotifyUserCreated(...)
+    .OnError(logException)
+    .Start();</pre>
+<div>These kind of workflows can be implemented with this API. This is the actual workflow for the <a href="https://fabrikamshipping.cloudapp.net/SubscriptionConsole/Provisioning/NewEnterpriseSubscription">FabrikamShipping enterprise provisioning</a> and <a href="https://fabrikamshipping.cloudapp.net/SubscriptionConsole/Provisioning/NewSmallBizSubscription">small business provisioning</a>:</div>
+<table style="color: #000000" border="0" cellspacing="0" cellpadding="2" width="600">
+<tbody>
+<tr>
+<td width="300" valign="top"><strong>Enterprise Provisioning</strong></td>
+<td width="300" valign="top"><strong>Small Business Provisioning</strong></td>
+</tr>
+<tr>
+<td width="300" valign="top"><a href="http://blogs.southworks.net/mwoloski/files/2010/10/image5.png"><img style="padding-left: 0px;padding-right: 0px;float: none;padding-top: 0px;border: 0px" src="http://blogs.southworks.net/mwoloski/files/2010/10/image_thumb4.png" border="0" alt="image" width="386" height="412" /></a></td>
+<td width="300" valign="top"><a href="http://blogs.southworks.net/mwoloski/files/2010/10/image8.png"><img style="padding-left: 0px;padding-right: 0px;padding-top: 0px;border: 0px" src="http://blogs.southworks.net/mwoloski/files/2010/10/image_thumb7.png" border="0" alt="image" width="315" height="403" /></a></td>
+</tr>
+</tbody>
+</table>
+<div>So in short, the API supports the following</div>
+<ul>
+	<li>Queue message based triggers</li>
+	<li>Time based triggers for tasks that require manual or long running operations</li>
+	<li>Commands with Do and Undo for compensation and retry</li>
+	<li>Sharing context between commands</li>
+	<li>Handling errors</li>
+</ul>
+<h2>Commands</h2>
+<div>Every command derives from an interface ICommand that has Do and Undo and takes a dictionary that has contextual information. This is a sample command that deploys a package to a hosted service.</div>
+<pre class="brush: csharp;">public class DeployAzureService : ICommand
+{
+      private readonly ProvisioningLogger logger;
+      private readonly ServiceManagementWrapper azureApi;
+
+      public DeployAzureService(ProvisioningLogger logger, ServiceManagementWrapper azureApi)
+      {
+          this.logger = logger;
+          this.azureApi = azureApi;
+      }
+
+      public void Do(IDictionary&lt;string, object&gt; context)
+      {
+          // use azure Service Management API to deploy the package
+      }
+
+      public void Undo(IDictionary&lt;string, object&gt; context)
+      {
+         // remove the package
+      }
+}</pre>
+<div>There are commands for a bunch of things:</div>
+<ul>
+	<li>Create SQL Azure DB</li>
+	<li>Send emails</li>
+	<li>Create a trust relationship with Access Control Service</li>
+	<li>Create x509 certificates</li>
+	<li>Running SQL scripts</li>
+	<li>Create tenant metadata</li>
+</ul>
+<h2>Logging</h2>
+<div>You can also use a logger (see the ProvisioningLogger dependency on the command above) that will push log entries to an Azure table that later on we use to print a nice looking status for both the subscriber and the admin</div>
+<div><a href="http://blogs.southworks.net/mwoloski/files/2010/10/image9.png"><img style="padding-left: 0px;padding-right: 0px;padding-top: 0px;border: 0px" src="http://blogs.southworks.net/mwoloski/files/2010/10/image_thumb8.png" border="0" alt="image" width="464" height="276" /></a></div>
+<div>If something went wrong you can click on View Log and look at the actual steps and values</div>
+<div><a href="http://blogs.southworks.net/mwoloski/files/2010/10/image10.png"><img style="padding-left: 0px;padding-right: 0px;padding-top: 0px;border: 0px" src="http://blogs.southworks.net/mwoloski/files/2010/10/image_thumb9.png" border="0" alt="image" width="640" height="451" /></a></div>
+<div>Finally, this comes with the usual disclaimer. This is sample code and is provided as-is… But if you are an ISV creating apps in Azure, you should definitely check this out!</div>

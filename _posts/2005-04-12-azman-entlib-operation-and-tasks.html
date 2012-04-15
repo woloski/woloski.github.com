@@ -1,0 +1,17 @@
+--- 
+layout: post
+title: AzMan EntLib - operation and tasks
+published: true
+meta: {}
+
+tags: 
+- EntLib
+type: post
+status: publish
+---
+
+        <P>AzMan could define operations, tasks and roles. You can use operations and tasks from entlib.</P>
+<P>Here you have a small AzMan wrapper class that will encapsulate how to use AzMan from EntLib<BR>Note: this code is not tested nor compiled. It is provided as-is.</P><SPAN>
+<P><SPAN><SPAN>public</SPAN> <SPAN>class</SPAN> AzMan {<BR>    <SPAN>public</SPAN> <SPAN>static</SPAN> <SPAN>bool</SPAN> CheckOperation( <SPAN>string</SPAN> operation, IPrincipal principal ) {<BR>        <SPAN>return</SPAN> Check ( <SPAN>"O:"</SPAN> <SPAN>+</SPAN> operation, principal ); <BR>    }<BR><BR>    <SPAN>public</SPAN> <SPAN>static</SPAN> <SPAN>bool</SPAN> CheckTask( <SPAN>string</SPAN> task, IPrincipal principal ) {<BR>        <SPAN>return</SPAN> Check ( task, principal ); <BR>    }<BR><BR><BR>    <SPAN>private</SPAN> <SPAN>static</SPAN> <SPAN>bool</SPAN> Check( <SPAN>string</SPAN> context, IPrincipal principal ) {<BR>        IAuthorizationProvider authzProv <SPAN>=</SPAN> AuthorizationFactory.GetAuthorizationProvider(<SPAN>"AzManProvider"</SPAN>);<BR>        <SPAN>bool</SPAN> isAuthorized <SPAN>=</SPAN> authzProv.Authorize( principal, context );<BR>        <SPAN>return</SPAN> isAuthorized;<BR>    }<BR>}<BR><BR><BR>WindowsPrincipal principal <SPAN>=</SPAN> <SPAN>new</SPAN> WindowsPrincipal( WindowsIdentity.GetCurrent() );<BR><SPAN>if</SPAN> ( AzMan.CheckOperation( <SPAN>"PayBill"</SPAN>, principal ) {<BR>    <SPAN>// principal can do operation PayBill</SPAN><BR>} <SPAN>else</SPAN> {<BR>    <SPAN>// ERR!</SPAN><BR>}<BR><BR><SPAN>if</SPAN> ( AzMan.CheckTask( <SPAN>"TransferFunds"</SPAN>, principal ) {<BR>    <SPAN>// principal can do task TransferFunds</SPAN><BR>} <SPAN>else</SPAN> {<BR>    <SPAN>// ERR!</SPAN><BR>}<BR><BR><BR></SPAN></P>
+<P><BR> </P></SPAN>
+      

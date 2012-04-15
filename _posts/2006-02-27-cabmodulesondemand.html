@@ -1,0 +1,140 @@
+--- 
+layout: post
+title: "HowTo: load CAB modules on demand"
+published: true
+meta: {}
+
+tags: 
+- CAB
+type: post
+status: publish
+---
+<p>This article describes an approach to loading CAB modules on demand. You can <a href="http://www.southworks.net/matiaswoloski/content/binary/DynamicModules.zip">Download</a> the solution.</p>  <h3>Introduction</h3>  <p class="MsoNormal">Modules are composed of a set of services, WorkItems, SmartParts, controllers/presenters, business entities, and last but not least Module Initialization class, which is used for initializing and running the module's WorkItems</p>  <p class="MsoNormal">When the application starts, CAB loads the <em>ProfileCatalog.xml</em> file and determines which modules it needs to load. After it retrieves the list of modules, it begins loading them and initializing them. If any of the modules contain a <em>ModuleInit</em> class, it will construct the class and call the appropriate <em>Load</em> and/or <em>AddServices</em> methods.</p>  <p>Loading modules is an expensive operation because it entails loading assemblies, creating services, registering <em>WorkItemExtensions</em>, and calling <em>ModuleInit</em> methods.</p>  <p>Let&#8217;s analyze this in detail and how to mitigate the expensive task.</p>  <h3>Enumerating modules</h3>  <p class="MsoNormal">CAB has a built-in service that provides module enumeration: the <em>IModuleEnumerator</em>. This service definition is very simple. It returns an array of module information (assembly name, roles and update location):</p>  <p><span></span>    <pre><span class="kwrd">public</span> <span class="kwrd">interface</span> IModuleEnumerator<br />{<br /><span class="rem">  /// </span><br /><span class="rem">  /// Gets an array of  enumerated from the source the</span><br /><span class="rem">  /// enumerator is processing.</span><br /><span class="rem">  /// </span><br /><span class="rem">  /// An array of  instances.</span><br />  IModuleInfo[] EnumerateModules();<br />}</pre>
+
+  <p></p>
+The default implementation is the <em>FileCatalogModuleEnumerator</em>. You can use the <em>FileCatalogModuleEnumerator</em> class to read the catalog of modules from an XML file specified in the application configuration file. If no file is specified, the class searches for a file named <em>ProfileCatalog.xml</em> in the application base folder. Here is a sample ProfileCatalog file:</p>
+
+<p class="MsoNormal"><span></span>
+
+  <pre><span class="kwrd">&lt;</span><span class="html">SolutionProfile</span> <span class="attr">xmlns</span>=&quot;<span class="attr">http:</span>//<span class="attr">schemas</span>.<span class="attr">microsoft</span>.<span class="attr">com</span>/<span class="attr">pag</span>/<span class="attr">cab-profile</span><span class="kwrd">&gt;</span><br /><span class="kwrd">	&lt;</span><span class="html">Modules</span><span class="kwrd">&gt;</span><br /><span class="kwrd">		&lt;</span><span class="html">ModuleInfo</span> <span class="attr">AssemblyFile</span><span class="kwrd">=&quot;Module1.dll&quot;</span><span class="kwrd">&gt;</span><br /><span class="kwrd">			&lt;</span><span class="html">Roles</span><span class="kwrd">&gt;</span><br /><span class="kwrd">				&lt;</span><span class="html">Role</span> <span class="attr">Allow</span><span class="kwrd">=&quot;Users&quot;</span><span class="kwrd">/&gt;</span><br /><span class="kwrd">			&lt;/</span><span class="html">Roles</span><span class="kwrd">&gt;</span><br /><span class="kwrd">		&lt;/</span><span class="html">ModuleInfo</span><span class="kwrd">&gt;</span><br /><span class="kwrd">		&lt;</span><span class="html">ModuleInfo</span> <span class="attr">AssemblyFile</span><span class="kwrd">=&quot; Module2.dll&quot;</span><span class="kwrd">&gt;</span><br /><span class="kwrd">			&lt;</span><span class="html">Roles</span><span class="kwrd">&gt;</span><br /><span class="kwrd">				&lt;</span><span class="html">Role</span> <span class="attr">Allow</span><span class="kwrd">=&quot;Sales&quot;</span><span class="kwrd">/&gt;</span><br /><span class="kwrd">				&lt;</span><span class="html">Role</span> <span class="attr">Allow</span><span class="kwrd">=&quot;Administrators&quot;</span><span class="kwrd">/&gt;</span><br /><span class="kwrd">			&lt;/</span><span class="html">Roles</span><span class="kwrd">&gt;</span><br /><span class="kwrd">		&lt;/</span><span class="html">ModuleInfo</span><span class="kwrd">&gt;</span><br /><span class="kwrd">	&lt;/</span><span class="html">Modules</span><span class="kwrd">&gt;</span><br /><span class="kwrd">&lt;/</span><span class="html">SolutionProfile</span><span class="kwrd">&gt;</span></pre>
+
+  <p></p>
+</p>
+
+<pre><span class="kwrd">&lt;</span><span class="html">SolutionProfile</span> <span class="attr">xmlns</span>=&quot;<span class="attr">http:</span>//<span class="attr">schemas</span>.<span class="attr">microsoft</span>.<span class="attr">com</span>/<span class="attr">pag</span>/<span class="attr">cab-profile</span><span class="kwrd">&gt;</span><br /><span class="kwrd">	&lt;</span><span class="html">Modules</span><span class="kwrd">&gt;</span><br /><span class="kwrd">		&lt;</span><span class="html">ModuleInfo</span> <span class="attr">AssemblyFile</span><span class="kwrd">=&quot;Module1.dll&quot;</span><span class="kwrd">&gt;</span><br /><span class="kwrd">			&lt;</span><span class="html">Roles</span><span class="kwrd">&gt;</span><br /><span class="kwrd">				&lt;</span><span class="html">Role</span> <span class="attr">Allow</span><span class="kwrd">=&quot;Users&quot;</span><span class="kwrd">/&gt;</span><br /><span class="kwrd">			&lt;/</span><span class="html">Roles</span><span class="kwrd">&gt;</span><br /><span class="kwrd">		&lt;/</span><span class="html">ModuleInfo</span><span class="kwrd">&gt;</span><br /><span class="kwrd">		&lt;</span><span class="html">ModuleInfo</span> <span class="attr">AssemblyFile</span><span class="kwrd">=&quot; Module2.dll&quot;</span><span class="kwrd">&gt;</span><br /><span class="kwrd">			&lt;</span><span class="html">Roles</span><span class="kwrd">&gt;</span><br /><span class="kwrd">				&lt;</span><span class="html">Role</span> <span class="attr">Allow</span><span class="kwrd">=&quot;Sales&quot;</span><span class="kwrd">/&gt;</span><br /><span class="kwrd">				&lt;</span><span class="html">Role</span> <span class="attr">Allow</span><span class="kwrd">=&quot;Administrators&quot;</span><span class="kwrd">/&gt;</span><br /><span class="kwrd">			&lt;/</span><span class="html">Roles</span><span class="kwrd">&gt;</span><br /><span class="kwrd">		&lt;/</span><span class="html">ModuleInfo</span><span class="kwrd">&gt;</span><br /><span class="kwrd">	&lt;/</span><span class="html">Modules</span><span class="kwrd">&gt;</span><br /><span class="kwrd">&lt;/</span><span class="html">SolutionProfile</span><span class="kwrd">&gt;</span></pre>
+
+<p></p>
+
+<pre><span class="kwrd">&lt;</span><span class="html">SolutionProfile</span> <span class="attr">xmlns</span>=&quot;<span class="attr">http:</span>//<span class="attr">schemas</span>.<span class="attr">microsoft</span>.<span class="attr">com</span>/<span class="attr">pag</span>/<span class="attr">cab-profile</span><span class="kwrd">&gt;</span><br /><span class="kwrd">	&lt;</span><span class="html">Modules</span><span class="kwrd">&gt;</span><br /><span class="kwrd">		&lt;</span><span class="html">ModuleInfo</span> <span class="attr">AssemblyFile</span><span class="kwrd">=&quot;Module1.dll&quot;</span><span class="kwrd">&gt;</span><br /><span class="kwrd">			&lt;</span><span class="html">Roles</span><span class="kwrd">&gt;</span><br /><span class="kwrd">				&lt;</span><span class="html">Role</span> <span class="attr">Allow</span><span class="kwrd">=&quot;Users&quot;</span><span class="kwrd">/&gt;</span><br /><span class="kwrd">			&lt;/</span><span class="html">Roles</span><span class="kwrd">&gt;</span><br /><span class="kwrd">		&lt;/</span><span class="html">ModuleInfo</span><span class="kwrd">&gt;</span><br /><span class="kwrd">		&lt;</span><span class="html">ModuleInfo</span> <span class="attr">AssemblyFile</span><span class="kwrd">=&quot; Module2.dll&quot;</span><span class="kwrd">&gt;</span><br /><span class="kwrd">			&lt;</span><span class="html">Roles</span><span class="kwrd">&gt;</span><br /><span class="kwrd">				&lt;</span><span class="html">Role</span> <span class="attr">Allow</span><span class="kwrd">=&quot;Sales&quot;</span><span class="kwrd">/&gt;</span><br /><span class="kwrd">				&lt;</span><span class="html">Role</span> <span class="attr">Allow</span><span class="kwrd">=&quot;Administrators&quot;</span><span class="kwrd">/&gt;</span><br /><span class="kwrd">			&lt;/</span><span class="html">Roles</span><span class="kwrd">&gt;</span><br /><span class="kwrd">		&lt;/</span><span class="html">ModuleInfo</span><span class="kwrd">&gt;</span><br /><span class="kwrd">	&lt;/</span><span class="html">Modules</span><span class="kwrd">&gt;</span><br /><span class="kwrd">&lt;/</span><span class="html">SolutionProfile</span><span class="kwrd">&gt;</span></pre>
+
+<h3>Loading modules</h3>
+
+<p class="MsoNormal">Now that we know how to enumerate the available modules, let&#8217;s look at how CAB loads them. The <em>IModuleLoaderService</em> is the service in charge of this:</p>
+
+<p><span></span>
+
+  <pre><span class="kwrd">public</span> <span class="kwrd">interface</span> IModuleLoaderService<br />{<br />    <span class="rem">/// </span><br />    <span class="rem">/// Returns a list of the loaded modules.</span><br />    <span class="rem">/// </span><br />    IList LoadedModules { get; }<br /><br />    <span class="rem">/// </span><br />    <span class="rem">/// Loads the specified list of modules.</span><br />    <span class="rem">/// </span><br />    <span class="rem">/// The  that will host the modules.</span><br />    <span class="rem">/// The list of modules to load.</span><br />    <span class="kwrd">void</span> Load(WorkItem workItem, <span class="kwrd">params</span> IModuleInfo[] modules);<br /><br />    <span class="rem">/// </span><br />    <span class="rem">/// Loads assemblies as modules.</span><br />    <span class="rem">/// </span><br />    <span class="rem">/// The  that will host the modules.</span><br />    <span class="rem">/// The list of assemblies to load as modules.</span><br />    <span class="kwrd">void</span> Load(WorkItem workItem, <span class="kwrd">params</span> Assembly[] assemblies);<br /><br />    <span class="rem">/// </span><br />    <span class="rem">/// The event that is fired when a module has been loaded by the service.</span><br />    <span class="rem">/// </span><br />    <span class="kwrd">event</span> EventHandler&lt;DataEventArgs&gt; ModuleLoaded;<br />}</pre>
+
+  <p></p>
+The default implementation is the <em>ModuleLoaderService</em> and performs these steps:</p>
+
+<ol style="margin-top: 0cm" type="1">
+  <li class="MsoNormal">Uses the information returned from the <em>IModuleEnumerator</em> to determine which modules should be loaded at run time. </li>
+
+  <li class="MsoNormal">Loads the specified assemblies, checks them for any <em>ModuleDependency</em> attributes and builds a list of modules to initialize. </li>
+
+  <li class="MsoNormal">It then iterates over each module in the sequence, loading the services associated with the module (including creating instances of classes decorated with the <em>[Service]</em> attribute) </li>
+
+  <li class="MsoNormal">It iterates again over the whole sequence calling the <em>Load</em> method on any classes that extend <em>ModuleInit</em>. </li>
+
+  <li class="MsoNormal">Registers any types with the <em>WorkItemExtension</em> attribute into the <em>WorkItemExtensionService</em>. </li>
+
+  <li class="MsoNormal">Finally, it notifies about loaded modules. </li>
+</ol>
+
+<h3>Loading on demand</h3>
+
+<p class="MsoNormal">Now that you know how modules are loaded let&#8217;s see how we can change the default behavior to load only the necessary modules on startup and load others on demand. The solution consists of having two profile catalogs and a bootstrap module called arbitrary <em>HomeModule</em>.
+
+  <br />The <em>ProfileCatalog.xml</em> has the modules loaded on startup and the <em>ProfileCatalogOnDemand.xml</em> has the modules to be loaded on demand.</p>
+
+<p><a href="http://blogs.southworks.net/mwoloski/files/2008/06/loadcabondemand1.gif"><img height="423" alt="loadcabondemand1" src="http://blogs.southworks.net/mwoloski/files/2008/06/loadcabondemand1-thumb.gif" width="473" border="0" /></a> </p>
+
+<p class="MsoNormal">Now we need a way to enumerate the available modules to be loaded on demand. We will reuse the CAB <em>FileCatalogEnumerator</em> to achieve this. The schema of both the <em>ProfileCatalogOnDemand</em> xml and the <em>ProfileCatalog</em> are the same. The only thing we need to change is which catalog might be read. Fortunately, this service has a constructor that accepts a catalog file path.</p>
+
+<p class="Style1"><span></span>
+
+  <pre><span class="kwrd">new</span> FileCatalogModuleEnumerator( <span class="str">&quot;ProfileCatalogOnDemand.xml&quot;</span> )</pre>
+
+  <p></p>
+</p>
+
+<pre><span class="kwrd">new</span> FileCatalogModuleEnumerator( <span class="str">&quot;ProfileCatalogOnDemand.xml&quot;</span> )</pre>
+
+<p></p>
+
+<pre><span class="kwrd">new</span> FileCatalogModuleEnumerator( <span class="str">&quot;ProfileCatalogOnDemand.xml&quot;</span> )</pre>
+
+<p class="Style1">The bootstrap module will host this service so we need to add it to the root work item of the module.
+  <br /><span></span>
+
+  <pre>WorkItem.Services.Add( <br />	<span class="kwrd">new</span> FileCatalogModuleEnumerator(<span class="str">&quot;ProfileCatalogOndemand.xml&quot;</span>) );</pre>
+
+  <p></p>
+</p>
+
+<pre>WorkItem.Services.Add( <br />	<span class="kwrd">new</span> FileCatalogModuleEnumerator(<span class="str">&quot;ProfileCatalogOndemand.xml&quot;</span>) );</pre>
+
+<p></p>
+
+<pre>WorkItem.Services.Add( <br />	<span class="kwrd">new</span> FileCatalogModuleEnumerator(<span class="str">&quot;ProfileCatalogOndemand.xml&quot;</span>) );</pre>
+
+<p class="MsoNormal">Finally, we might be able to consume this service from within any workitem, view, presenter in the hierarchy. In conjunction with the <em>IModuleLoaderService,</em> loading modules on demand from any part of the CAB application will be easy.</p>
+
+<p><span></span>
+
+  <pre><span class="kwrd">void</span> LoadFirstAvailableModuleTest()<br />{<br />    IModuleInfo[] modules = _modEnumerator.EnumerateModules()<br />    _moduleLoaderService.Load(_workItem, modules[0]);<br />} </pre>
+
+  <p></p>
+</p>
+
+<p><a href="http://blogs.southworks.net/mwoloski/files/2008/06/loadcabondemand2.jpg"><img height="397" alt="loadcabondemand2" src="http://blogs.southworks.net/mwoloski/files/2008/06/loadcabondemand2-thumb.jpg" width="445" border="0" /></a> </p>
+
+<h3>Sample</h3>
+
+<p class="MsoNormal">The sample that demonstrates these concepts has been written following the guidelines of <a href="http://www.gotdotnet.com/codegallery/codegallery.aspx?id=941d2228-3bb5-42fd-8004-c08595821170">SCBAT</a>. Indeed, the Guidance Package has been used to create modules and views.
+
+  <br />This is the Shell and the HomeModule loaded. The HomeModule inserts a <em>Modules-&gt; Load Module&#8230;</em> menu item.</p>
+
+<p class="MsoNormal"><a href="http://blogs.southworks.net/mwoloski/files/2008/06/loadcabondemand3.jpg"><img height="377" alt="loadcabondemand3" src="http://blogs.southworks.net/mwoloski/files/2008/06/loadcabondemand3-thumb.jpg" width="446" border="0" /></a> </p>
+
+<p class="MsoNormal">When the Load Module command is executed, a dialog shows the modules available and the modules already loaded. We need to use the module enumerator and module loader services, so they are injected on the presenter.</p>
+
+<p><span></span>
+
+  <pre>[InjectionConstructor]<br /><span class="kwrd">public</span> ModuleLoaderDialogPresenter<br />    (<br />        [ServiceDependency] IModuleLoaderService loader,<br />        [ServiceDependency] FileCatalogModuleEnumerator modEnumerator,<br />        [ServiceDependency] WorkItem workItem<br />    )<br />{<br />    _moduleLoaderService = loader;<br />    _modEnumerator = modEnumerator;<br />    _workItem = workItem;<br />}</pre>
+
+  <p></p>
+</p>
+
+<p class="MsoNormal"><a href="http://blogs.southworks.net/mwoloski/files/2008/06/loadcabondemand4.jpg"><img height="355" alt="loadcabondemand4" src="http://blogs.southworks.net/mwoloski/files/2008/06/loadcabondemand4-thumb.jpg" width="317" border="0" /></a> 
+
+  <br />&#160; <br />Then we select the Module1 and load it. When <em>ModuleLoaderService</em> finish the process it will raise a ModuleLoaded event.</p>
+
+<p><a href="http://blogs.southworks.net/mwoloski/files/2008/06/loadcabondemand5.jpg"><img height="364" alt="loadcabondemand5" src="http://blogs.southworks.net/mwoloski/files/2008/06/loadcabondemand5-thumb.jpg" width="325" border="0" /></a> </p>
+
+<p class="MsoNormal">The Module1 adds a View on the right workspace.</p>
+
+<p><a href="http://blogs.southworks.net/mwoloski/files/2008/06/loadcabondemand6.jpg"><img height="412" alt="loadcabondemand6" src="http://blogs.southworks.net/mwoloski/files/2008/06/loadcabondemand6-thumb.jpg" width="484" border="0" /></a> </p>
+
+<h2>What we can do from here? </h2>
+
+<p>This sample serves as a starting point to take module loading to a next step</p>
+
+<ul style="margin-top: 0cm" type="disc">
+  <li>We could change the ProfileCatalogOnDemand schema and include configuration to load modules conditionally </li>
+
+  <li class="MsoNormal">The module enumerator could be part of the Shell and get rid of the bootstrap module, however we need to be able to identify the <em>IModuleEnumerator</em> service to retrieve from the ObjectBuilder container. </li>
+</ul>
+
+<p><a href="http://www.southworks.net/matiaswoloski/content/binary/DynamicModules.zip">Download</a> the solution</p>

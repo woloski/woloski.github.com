@@ -1,0 +1,28 @@
+--- 
+layout: post
+title: "OutlookBar 2.0 \xE2\x80\x93 from Winforms to WPF"
+published: true
+meta: {}
+
+tags: 
+- CAB
+- Client Application Development
+- CompositeWPF
+type: post
+status: publish
+---
+<p></p>  <p>If you work/ed with <a href="http://www.codeplex.com/smartclient">CAB</a> and <a href="http://www.codeplex.com/smartclient">SCSF</a> you might remember the <a href="http://blogs.southworks.net/mwoloski/2006/05/01/outlookbar/">Outlook Bar we created in 2006</a> with the initial input of <a href="http://www.chrisholmesonline.com">Chris Holmes</a> and the help of some of the <a href="http://www.southworks.net">Southworks</a> guys like <a href="http://blogs.southworks.net/mszklanny">Mariano</a> and <a href="http://blogs.southworks.net/ejadib">Ezequiel</a>. It turned out to be a <a href="http://www.google.com/search?q=outlookbar+cab&amp;rls=com.microsoft:*&amp;ie=UTF-8&amp;oe=UTF-8&amp;startIndex=&amp;startPage=1">popular control</a> for composite applications since the nature of modules mapped quite well with the navigation bar buttons and the outlook navigation bar is a well known UX pattern for a fair amount of users.</p>  <p>We wanted to have this control for WPF apps and also have it integrated with <a href="http://www.codeplex.com/CompositeWPF">CompositeWPF</a> through a region adapter. The first version looks like this:</p>  <p></p>  <p></p>  <p></p>  <p></p>  <p></p>  <p></p>  <p></p>  <p></p>  <p align="center"><img height="366" alt="clip_image001" src="http://weblogs.asp.net/blogs/ezequieljadib/WindowsLiveWriter/96e099bebadc_1252E/clip_image001_3.png" width="161" border="0" /></p>  <p align="left">The trick is to overwrite the template of the <a href="http://msdn.microsoft.com/en-us/library/system.windows.controls.tabcontrol.aspx">TabControl</a> and <a href="http://msdn.microsoft.com/en-us/library/system.windows.controls.tabitem.aspx">TabItem</a> (WPF separates the behavior of the control from the visual layout and style), inherit from the SelectionRegionAdapter of CompositeWPF and adding a behavior that will publish an event with the EventAggregator subsytem on TabItem (navigation bar button) click.</p>  <p align="left">We also created an attached property to separate the metadata containing the title and event payload from the region. In a future version this will also handle an icon associated to the button.</p>  <p align="left">This is the current usage:</p>  <pre><font face="conso" size="2">MyView view = new MyView();
+OutlookBarControl.SetOutlookBarMetadata(view, new OutlookBarMetadata
+    {
+        Title = &quot;Mail&quot;,
+        Payload = &quot;OnMailModuleActivate&quot;
+    });
+
+<font face="conso" size="2">IRegionManager regionManager = Container.Resolve&lt;IRegionManager&gt;(); </font></font></pre>
+
+<pre><font face="conso" size="2">regionManager.Regions[RegionNames.OutlookBarRegion].Add(view);
+regionManager.Regions[RegionNames.OutlookBarRegion].Activate(view);</font></pre>
+
+<p>I would like to see a simpler API, specially for associating the metadata, but this is a start.</p>
+
+<p>Read more about the implementation in Ezequiel’s <a href="http://blogs.southworks.net/ejadib/2008/07/22/use-the-outlookbar-in-your-compositewpf-prism-applications/">post</a> and download the code from the <a href="http://www.codeplex.com/CompositeWPFContrib">contrib site</a>.</p>

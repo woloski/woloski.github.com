@@ -1,0 +1,32 @@
+--- 
+layout: post
+title: Splitter workflow - Workflow Services aka "Silver" WF 3.5
+published: true
+meta: {}
+
+tags: 
+- Architecture
+- Indigo
+- Windows Workflow Foundation
+type: post
+status: publish
+---
+<p>While reviewing DinnerNow.net I found an interesting workflow implementation.</p>  <p><strong>Scenario</strong>:</p>  <p>A customer place an order for food from multiple restaurants. <a href="http://www.dinnernow.net">DinnerNow</a> acts as a hub that will grab the order, will check each item and will group them by restaurant.</p>  <p>How this is implemented? They have two workflows:</p>  <ul>   <li>Sequential: this workflow receive a customer order, splits and gorup the order items within a set of restaurant orders. For each restaurant order a state machine workflow is started. </li>    <li>State machine: this workflow represents a single order workflow (open, ready for pickup, delivered, payed, complete) </li> </ul>  <p>You can download <a href="http://www.dinnernow.net/">DinnerNow</a> today and see this workinf in NET 3.0.</p>  <p>We've been working on some training material lately to show how to do this using NET 3.5. There is a new feature code-named &quot;Silver&quot; (read more on <a href="http://blogs.msdn.com/mwinkle/archive/2007/02/28/wcf-and-wf-in-quot-orcas-quot.aspx">Matt Winkler blog</a>) that basically are a couple of activities to integrate Workflow Foundation with Windows Communication Foundation: the <strong>ReceiveActivity</strong> and <strong>SendActivity</strong>.</p>  <p>The following illustration shows how to implement a splitter workflow exposed as a service with WCF:</p>  <p><a href="http://blogs.southworks.net/mwoloski/files/2008/06/wf1.jpg"><img height="414" alt="wf1" src="http://blogs.southworks.net/mwoloski/files/2008/06/wf1-thumb.jpg" width="319" border="0" /></a> </p>  <p>This workflow is hosted using the new <strong>WorkflowServiceHost</strong> (that derives from the regular WCF ServiceHost). This new host will read the workflow and will associate the endpoints configured with specific contracts with the workflow implementation.</p>  <p>If you do the analogy with WCF, in WCF you create a service interface and then the implementation with a regular c# class. With Workflow Services you create the interface but the implementation is the workflow itself! And even more easy you can embed the contract metadata in the workflow and the host will read it and associate them with the endpoints.</p>  <p>When a client make a call to the PlaceOrder operation of the IOrderWorkflowService, a new workflow will be started (there is a property in the <strong>ReceiveActivity</strong> called <strong>CanCreateInstance</strong> to tell the runtime to do so). This call will be syncrounous but the workflow will start running and will split the orders.</p>  <p>The replicator is similar to a &quot;foreach&quot; statement but it can execute either in sequential or paralel. The first activity that executes is a &quot;SendActivity&quot;. This is the counter part of the other activity and will allow calling a service. Either we can call a regular service or we can call another workflow that has a ReceiveActivity listening. And that is what we are doing here: a workflow conversation where the sequential calls the state and when the state finishes it will call the sequential again.</p>  <p>Of course, you will need to somehow manage a context between calls. If not how the workflow knows if you are refering to instance A or instance B.</p>  <p>We are provided with a new set of bindings that allow to do that (netTcpContextBinding and wsHttpContextBinding). This bindings provide a property to access the context:</p>  <pre>proxy.PlaceOrder(order);
+IContextManager cm = proxy.InnerChannel.GetProperty();
+IDictionary&lt;XmlQualifiedName, <span class="kwrd">string</span>&gt;  context = cm.GetContext();</pre>
+
+<p>This context will have the workflow instance id of the recently created workflow. You can add things to the context and read them on the client and the workflow.</p>
+
+<pre>IContextManager cm = proxy.InnerChannel.GetProperty();
+cm.SetContext(context);
+proxy.UpdateShipping();</pre>
+
+<p>In the case of the child state machine workflow, how do we know which sequential workflow to return after we finish the order process? Simply, we bind the context on the ReceiveActivity of the initial state to a workflow depdendency property. This context is the one sent by the SendActivity of the parent workflow. Then when we get to the complete state we bind the saved context to the SendActivity.</p>
+
+<p>More info:</p>
+
+<p><a href="http://blogs.msdn.com/mwinkle/archive/2007/02/28/wcf-and-wf-in-quot-orcas-quot.aspx">Matt Winkler's blog</a></p>
+
+<p><a href="http://www.alexthissen.nl/blogs/main/default.aspx">Alex Thissen blog</a></p>
+
+<p><a href="/blogs/ezequielm/archive/2007/04/12/Una-primera-mirada-a-WCF-_2600_-WF-en-el-.NET-Framework-3.5.aspx">Ezequiel Morito</a> posted on his blog a <a href="/blogs/ezequielm/archive/2007/04/12/Una-primera-mirada-a-WCF-_2600_-WF-en-el-.NET-Framework-3.5.aspx">hello world tutorial</a> in spanish for the march ctp</p>

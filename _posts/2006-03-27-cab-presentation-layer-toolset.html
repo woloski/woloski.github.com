@@ -1,0 +1,84 @@
+--- 
+layout: post
+title: CAB - Presentation Layer Toolset
+published: true
+meta: {}
+
+tags: 
+- CAB
+type: post
+status: publish
+---
+
+        The last week someone posted <a href="http://www.gotdotnet.com/codegallery/messageboard/thread.aspx?id=22f72167-af95-44ce-a6ca-f2eafbf2653c&amp;mbid=c09776ca-f94c-4c83-a80c-75d381cabdd6&amp;threadid=f31be7d6-0a12-40c7-ab3d-5e7f65d6c15b">this question</a> to the <a href="http://www.gotdotnet.com/codegallery/codegallery.aspx?id=22f72167-af95-44ce-a6ca-f2eafbf2653c">CAB</a> <a href="http://www.gotdotnet.com/codegallery/messageboard/home.aspx?id=22f72167-af95-44ce-a6ca-f2eafbf2653c&amp;mbid=c09776ca-f94c-4c83-a80c-75d381cabdd6">messageboard</a><br>
+<br>
+    ... <i>there is any difficulty in combining other toolsets with CAB? where toolset = (DevExpress, Janus, ComponentOne, etc.)<br>
+<br>
+</i>This is a common question and I wanted to post the answer here as well so I could reference in the future.<br>
+<br>
+CAB has many features: the EventBroker, the concept of a WorkItem,
+SmartParts, Services, and more. All of them could be used without implementing
+the toolset for CAB.<br>
+Besides, you have the UI or toolset-related part. I will separate it in 3 topics:<br>
+<ul>
+  <li>UI Elements/UI Extension Sites</li>
+  <li>Commands/CommandHandlers</li>
+  <li>
+Workspaces</li>
+</ul>
+
+<h3>
+UI Elements/UI Extension Sites</h3>
+
+
+Another
+feature CAB has is abstracting the UI elements (like menus, toolbars,
+explorer bars, etc.). So you can treat them as just "sites" where you
+can add new elements from any module. Let me clarify this. Think about
+the Outlook Shell. When you switch between Mail, Calendars, Contacts
+you have different toolbars and different menu items. You need a
+mechanism to add/remove to these places. <br>
+That said, the Toolbar is
+an "extension site" in terms of CAB, the ToolStripMenu is another, the
+StatusBar is another, and so on. When the Mail "module" is activated, it will
+add/remove what it needs to the extension sites.<br>
+If you want to add
+UI elements to these sites using the CAB infrastructure you have to
+implement the "Adapters". These are very easy to implement. They are
+just small wrappers of your controls with Add/Remove methods.<br>
+<h3>
+Commands/CommandHandlers</h3>
+
+So
+what happens when you click on a ToolsStripButton of the Toolbar? You
+need to handle that click and do something with it. The Commands defeat
+that purpose. If you are use to double click the toolstrip button in
+the designer surface to create the event handler, then in CAB you won't
+have that facility. <br>
+From a module developer point of view you will add invokers to a ui element like this:<br><span><pre>Commands[<span class="str">"Reply"</span>].AddInvoker(replyButtonItem, <span class="str">"Click"</span>)</pre></span>And then you will consume this event using a CommandHandler<br><span><pre>[CommandHandler(<span class="str">"Reply"</span>)]<br><span class="kwrd">public</span> <span class="kwrd">void</span> ReplyHandler(<span class="kwrd">object</span> sender, EventArgs e) {<br>  ReplyMail();<br>}</pre></span>The
+way to integrate this with your toolset is by implementing the
+<i>CommandAdapter. </i>You will need one CommandAdapter for each specific UI element that raises a "Click" event
+(e.g. <i>ToolStripButton</i>, the <i>ExplorerBarItem</i>, etc.)<br>
+<h3>
+Workspaces</h3>
+
+
+Finally
+you have workspaces. These are layout/containers. They will abstract
+the addition/remotion/hiding of smartparts. That means that you will
+add smartparts to a workspace and the workspace will wrap a layout
+container. Eg. <i>Tab Control</i>, <i>Deck Panels, Dock </i><i>Panels</i>, <i>Zones</i>, etc.<br>
+Implementing this, will let you change the visual layout of a set of smartparts with a minumum effort.<br>
+<h3>Next steps<br>
+</h3>
+
+Finally, you can learn how to implement these 3 elements by:<br>
+- looking at the CompositeUI.Winforms project<br>
+-
+by downloading and looking over the <a href="http://www.infragistics.com/resource/Technologies/CAB/">CAB Extensibility kit of
+Infragistics</a><br>
+- by looking at this article <a href="http://www.codeproject.com/useritems/DockableCabWorkspaces.asp">Dockable CAB Workspace<br>
+</a>
+<br>
+
+      

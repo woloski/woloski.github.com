@@ -1,0 +1,25 @@
+--- 
+layout: post
+title: Validation in EDRA
+published: true
+meta: {}
+
+tags: 
+- Shadowfax
+type: post
+status: publish
+---
+
+        <P><EM>â€œA business action can provide a <STRONG>semantic</STRONG> input validation method (see the validationMethod attribute in the BusinessAction configuration). If requested in the configuration file, the method is called by the business action pipeline target before the service implementation method is called. The method is given the input data as argument(s) and should raise an exception if the date is not valid. If an exception is raised, the service implementation method is not called.â€œ</EM></P>
+<P>To implement it you would have to </P>
+<UL>
+<LI>Write another method it in your BA class (the name is arbitrary) 
+<LI>Put these attribute as part of the  in the configuration file.<BR>   validate="true"<BR>   validationMethod="ValidateFunds" 
+<LI>The method will receive the same request that your BA method 
+<LI>If the data doesn't validate throw a BusinessRuleException<BR></LI></UL>
+<P>EDRA also gives you a method to do <STRONG>syntactic</STRONG> validation of the message.</P>
+<P>The syntactic validation is implemented with a handler, and it will validate the request/response message with a XML schema (xsd). </P>
+<P><SPAN>&lt;ra:handler ra:handlerName=<SPAN>"SyntacticValidation"</SPAN>&gt;<BR>    &lt;ra:syntactValidationSettings ra:requestSchema=<SPAN>"C:\Projects\Test\Schemas\FundsTransferRequest.xsd"</SPAN> ra:responseSchema=<SPAN>""</SPAN>/&gt;<BR></SPAN></P>
+<P><EM>â€œThis can be used whenever you need to validate the structure of messages. This would typically be used with public services that can be called by any external client.<BR>With public services, you do not have control over the requester. Another reason for using this handler is to validate messages as early as possible in order to avoid overloading the system. This would also be used in a Service Implementation pipeline.</EM></P>
+<P><EM>There is a performance impact to consider as well. When both the request and response messages are validated, you may see a significant decrease in performance.<BR>You can reduce the impact to performance by only validating the request message.â€œ<BR></EM></P>
+      

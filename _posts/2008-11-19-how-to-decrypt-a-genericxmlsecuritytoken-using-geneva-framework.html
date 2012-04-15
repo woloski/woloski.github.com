@@ -1,0 +1,62 @@
+--- 
+layout: post
+title: How to decrypt a GenericXmlSecurityToken using Geneva Framework
+published: true
+meta: 
+  _edit_last: "24"
+  _edit_lock: "1229141702"
+tags: 
+- Geneva
+- Identity
+type: post
+status: publish
+---
+<p>&#160;</p>  <p>This took some time and you are lucky if you hit this after a search. This extension method allows you to decrypt a SAML 1.1 security token using <a href="http://connect.microsoft.com/content/content.aspx?ContentID=10101&amp;SiteID=642">Geneva Framework</a>.</p>  <div>   <pre style="padding-right: 0px;padding-left: 0px;font-size: 8pt;padding-bottom: 0px;margin: 0em;width: 100%;color: black;padding-top: 0px;font-family: consolas, &#39;Courier New&#39;, courier, monospace"><span style="color: #0000ff">public</span> <span style="color: #0000ff">static</span> ClaimsIdentityCollection ToClaimsIdentityCollection(<span style="color: #0000ff">this</span> GenericXmlSecurityToken token, <span style="color: #0000ff">string</span> thumbprintPrivateKey, <span style="color: #0000ff">string</span> thumbprintIssuerPublicKey, TrustVersion trustVersion)
+{
+    <span style="color: #008000">// Decrypt token</span>
+    var tokenString = <span style="color: #0000ff">new</span> StringReader(token.TokenXml.OuterXml);
+    var reader = XmlReader.Create(tokenString);
+
+    <span style="color: #008000">// Resolver</span>
+    X509Certificate2 privateKey = CertificateUtility.GetCertificateByThumbprint(StoreName.My, StoreLocation.LocalMachine, thumbprintPrivateKey);
+    X509SecurityToken privateKeyToken = <span style="color: #0000ff">new</span> X509SecurityToken(privateKey);
+    X509Certificate2 issuerKey = CertificateUtility.GetCertificateByThumbprint(StoreName.TrustedPeople, StoreLocation.LocalMachine, thumbprintIssuerPublicKey);
+    X509SecurityToken issuerKeyToken = <span style="color: #0000ff">new</span> X509SecurityToken(issuerKey);
+    List&lt;SecurityToken&gt; tokens = <span style="color: #0000ff">new</span> List&lt;SecurityToken&gt;();
+    tokens.Add(privateKeyToken);
+    tokens.Add(issuerKeyToken);
+    SecurityTokenResolver outOfBandTokenResolver = SecurityTokenResolver.CreateDefaultSecurityTokenResolver(<span style="color: #0000ff">new</span> ReadOnlyCollection&lt;SecurityToken&gt;(tokens), <span style="color: #0000ff">false</span>);
+
+    var samlHandler = SecurityTokenHandlerCollection.DefaultHandlers.SingleOrDefault(handler =&gt; handler <span style="color: #0000ff">is</span> Saml11SecurityTokenHandler) <span style="color: #0000ff">as</span> Saml11SecurityTokenHandler;
+    samlHandler.SamlSecurityTokenRequirement.IssuerTokenResolver = outOfBandTokenResolver;
+    EncryptedSecurityTokenHandler h = <span style="color: #0000ff">new</span> EncryptedSecurityTokenHandler(outOfBandTokenResolver, <span style="color: #0000ff">new</span> SecurityTokenHandlerCollection(<span style="color: #0000ff">new</span> SecurityTokenHandler[] { samlHandler }));
+    var serializer2 = <span style="color: #0000ff">new</span> SecurityTokenSerializerAdapter(
+        <span style="color: #0000ff">new</span> SecurityTokenHandlerCollection(<span style="color: #0000ff">new</span> SecurityTokenHandler[] { h }),
+        SecurityVersion.WSSecurity11,
+        trustVersion,
+        trustVersion == TrustVersion.WSTrust13 ? SecureConversationVersion.WSSecureConversation13 : SecureConversationVersion.WSSecureConversationFeb2005,
+        <span style="color: #0000ff">false</span>,
+        <span style="color: #0000ff">null</span>,
+        <span style="color: #0000ff">null</span>,
+        <span style="color: #0000ff">null</span>);
+    var samlSecurityToken = serializer2.ReadToken(reader, outOfBandTokenResolver);
+
+    samlHandler.SamlSecurityTokenRequirement.IssuerNameRegistry = <span style="color: #0000ff">new</span> NullIssuerNameRegistry();
+
+    var handlers = <span style="color: #0000ff">new</span> SecurityTokenHandlerCollection(<span style="color: #0000ff">new</span> SecurityTokenHandler[] { samlHandler });
+    var claims = handlers.ValidateToken(samlSecurityToken);
+
+    <span style="color: #0000ff">return</span> claims;
+}</pre>
+</div>
+
+<p>The way to use it:</p>
+
+<div>
+  <pre style="padding-right: 0px;padding-left: 0px;font-size: 8pt;padding-bottom: 0px;margin: 0em;width: 100%;color: black;padding-top: 0px;font-family: consolas, &#39;Courier New&#39;, courier, monospace">var token = GetTokenFromSomewhere();
+token.ToClaimsIdentityCollection( <span style="color: #006080">&quot;thmbprint of the cert used to decrypt the token&quot;</span>, 
+                                  <span style="color: #006080">&quot;thmbprint of the cert used to check the signature of the issuer&quot;</span>, 
+                                  TrustVersion.WSTrust13 or TrustVersion.WSTrustFeb2005 );</pre>
+</div>
+
+<p>Download it from <a href="http://snipurl.com/5xnty">here</a></p>

@@ -1,0 +1,73 @@
+--- 
+layout: post
+title: "OpenID \xE2\x80\x93 WS-Fed Protocol Transition STS"
+published: true
+meta: 
+  _edit_last: "24"
+  _edit_lock: "1321383557"
+tags: 
+- Federation
+- Geneva
+- OpenID
+type: post
+status: publish
+---
+I will go straight to the point in this post. This is a possible architecture if you want to allow <a href="http://openid.net/">OpenID</a> authentication in a claims-aware <a href="http://docs.oasis-open.org/wsfed/federation/v1.2/os/ws-federation-1.2-spec-os.html">WS-Federation</a>-compatible web application. In this architecture there are three actors:
+<ul>
+	<li>the web application (aka the relying party)</li>
+	<li>the OpenID provider (myopenid, Google, Yahoo, etc.)</li>
+	<li>the “protocol broker” STS that “translates” WS-Fed to OpenID and viceversa</li>
+</ul>
+<a href="http://blogs.southworks.net/mwoloski/files/2009/07/image2.png"><img src="http://blogs.southworks.net/mwoloski/files/2009/07/image-thumb2.png" border="0" alt="image" width="624" height="480" /></a>
+
+These are the interactions that happen at login time:
+<em><strong>NOTE</strong>: the diagram shows the interactions in a conceptual fashion. In reality all these arrows are HTTP requests/responses that are originated in the user browser.</em>
+<ol>
+	<li>The user browse the app</li>
+	<li>The Geneva Framework WSFederationAuthenticationModule detects the user is anonoymous and is trying to access a protected page. So it will create a WS-Fed SignIn Request against an STS</li>
+	<li>This STS, built with Geneva Framework, will provide a login page that will do the handshake against an OpenID Provider. To do this we use <a href="http://dotnetopenauth.net:8000/">DotNetOpenAuth</a>. In fact this STS will be an OpenID Relying Party.</li>
+	<li>The user will provide its OpenID identifier and the STS will issue an authentication request against the OpenId Provider</li>
+	<li>The OpenID Provider will ask for a password and will return an authentication response to the STS</li>
+	<li>The STS will grab the claims issued by the OpenID provider and will put them in the ClaimsIdentity, generating a SAML token with OpenID claims.</li>
+	<li>The STS will return a WS-Fed SignIn Response with the SAML token. The WSFederationAuthenticationModule will grab the token, validates it and generate a principal.</li>
+	<li>The user can now access a restricted page because it’s authenticated. But also we have profile information (if the user filled his profile in the OpenID provider)</li>
+</ol>
+So essentially what we’ve done is a <em>Protocol Transition STS </em>(don’t know if such term exists), that will transform WS-Fed to OpenID and viceversa.
+<table border="1" cellspacing="0" cellpadding="2" width="600">
+<tbody>
+<tr>
+<td width="600" valign="top"><em><strong>Aside
+</strong>This is powerful because we can now plug this STS with a Geneva Server and keep all of our applications WS-Fed compatible. Geneva Server can be used as an R-STS that all the applications will trust. This Geneva Server might be configured with different Identity Providers, one of them could be the “OpenID STS” that we’ve just described.</em></td>
+</tr>
+</tbody></table>
+Here are some screenshots working with myopenid.com and Google OpenId provider.
+
+<a href="http://blogs.southworks.net/mwoloski/files/2009/07/image3.png"><img src="http://blogs.southworks.net/mwoloski/files/2009/07/image-thumb3.png" border="0" alt="image" width="640" height="427" /></a>
+
+<a href="http://blogs.southworks.net/mwoloski/files/2009/07/image4.png"><img src="http://blogs.southworks.net/mwoloski/files/2009/07/image-thumb4.png" border="0" alt="image" width="640" height="457" /></a>
+
+<a href="http://blogs.southworks.net/mwoloski/files/2009/07/image5.png"><img src="http://blogs.southworks.net/mwoloski/files/2009/07/image-thumb5.png" border="0" alt="image" width="640" height="457" /></a>
+
+Notice that we are getting back some profile information (like email, full name, etc.). We are translating that profile info into SAML attributes that will be issued by the OpenID STS. The following code shows what we are doing on the OpenID STS login page. We translate the OpenID claims and store them in session to get them later from the STS.
+
+protected void OpenID_OnLoggedIn(object sender, OpenIdEventArgs e) { Dictionary&lt;string, string&gt; claims = GetClaims(e.Response); HttpContext.Current.Session.Add("OpenIDClaims", claims); } private Dictionary&lt;string, string&gt; GetClaims(IAuthenticationResponse response) { Dictionary&lt;string, string&gt; claims = new Dictionary&lt;string, string&gt;(); claims.Add(System.IdentityModel.Claims.ClaimTypes.Name, response.FriendlyIdentifierForDisplay); var claimsResponse = response.GetExtension&lt;ClaimsResponse&gt;(); if (claimsResponse == null) return claims; if (claimsResponse.BirthDate.HasValue) claims.Add(System.IdentityModel.Claims.ClaimTypes.DateOfBirth, claimsResponse.BirthDate.Value.ToString("o")); if (claimsResponse.Country != null) claims.Add(System.IdentityModel.Claims.ClaimTypes.Country, claimsResponse.Country); if (claimsResponse.Culture != null) claims.Add("http://openid-custom/identity/claims/culture", claimsResponse.Culture.ToString()); if (claimsResponse.Email != null) claims.Add(System.IdentityModel.Claims.ClaimTypes.Email, claimsResponse.Email); if (claimsResponse.FullName != null) claims.Add("http://openid-custom/identity/claims/fullname", claimsResponse.FullName); if (claimsResponse.Gender.HasValue) claims.Add(System.IdentityModel.Claims.ClaimTypes.Gender, claimsResponse.Gender.Value == Gender.Female ? "Female" : "Male"); if (claimsResponse.Language != null) claims.Add("http://openid-custom/identity/claims/language", claimsResponse.Language); if (claimsResponse.Nickname != null) claims.Add("http://openid-custom/identity/claims/nickname", claimsResponse.Nickname); if (claimsResponse.PostalCode != null) claims.Add(System.IdentityModel.Claims.ClaimTypes.PostalCode, claimsResponse.PostalCode); if (claimsResponse.PostalCode != null) claims.Add(System.IdentityModel.Claims.ClaimTypes.Locality, claimsResponse.TimeZone); return claims; }
+
+This is the code in the STS:
+
+protected override IClaimsIdentity GetOutputClaimsIdentity( IClaimsPrincipal principal, RequestSecurityToken request, Scope scope ) { ClaimsIdentity outputIdentity = new ClaimsIdentity(); if ( null == principal ) { throw new InvalidRequestException( "The caller's principal is null." ); } var openIdClaims = HttpContext.Current.Session["OpenIDClaims"] as Dictionary&lt;string, string&gt;; foreach (var openIdClaim in openIdClaims) { outputIdentity.Claims.Add(new Claim(openIdClaim.Key, openIdClaim.Value)); } return outputIdentity; }
+
+<strong>Logging in with Google OpenID provider</strong>
+
+<a href="http://blogs.southworks.net/mwoloski/files/2009/07/image6.png"><img src="http://blogs.southworks.net/mwoloski/files/2009/07/image-thumb6.png" border="0" alt="image" width="640" height="457" /></a>
+
+<a href="http://blogs.southworks.net/mwoloski/files/2009/07/image7.png"><img src="http://blogs.southworks.net/mwoloski/files/2009/07/image-thumb7.png" border="0" alt="image" width="640" height="457" /></a>
+
+<a href="http://blogs.southworks.net/mwoloski/files/2009/07/image8.png"><img src="http://blogs.southworks.net/mwoloski/files/2009/07/image-thumb8.png" border="0" alt="image" width="640" height="457" /></a>
+
+Since Google does not provide profile info, we get a hash as a login name. We could use OAuth and fetch profile attributes from Google (like email, name, etc.) in the STS and fill more claims. But to do that you need to host the site publicly and register it at Google, it does not work in localhost.
+<h2>Summary</h2>
+In this post we showed how you can use Geneva Framework on your claims-aware applications and authenticate against OpenID which is a different protocol. What I really like about Geneva Framework is that it allows you to transition any authentication scheme with WS-Fed because it plays well with the ASP.NET pipeline. So it’s basically an adapter between *any* existing authentication investment and WS-Federation and SAML token. This reminds me of a blog post Vittorio wrote some time ago <a href="http://blogs.msdn.com/vbertocci/archive/2009/04/23/enhance-your-asp-net-membership-based-website-by-adding-identity-provider-capabilities.aspx">Enhance your ASP.NET Membership-based website by adding Identity Provider capabilities</a> (hint: read the last paragraph of his post).
+
+Here is the code for the STS and a sample relying party created with the Claims-Aware Website template from Geneva Framework.
+
+<a href="http://snipurl.com/u9ry4">Download</a>

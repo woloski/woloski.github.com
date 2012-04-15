@@ -1,0 +1,44 @@
+--- 
+layout: post
+title: Secure Conversation in WSE 3
+published: true
+meta: {}
+
+tags: 
+- WSE
+type: post
+status: publish
+---
+
+        Setup secure conversation using WSE 3 was very simple. You just need to
+add two attributes to the secure policy assertion
+(usernameOverCertificate, mutual, etc).<br>
+
+<pre>establishSecurityContext="true" renewExpiredSecurityContext="true"<br></pre>The
+problem was when I wanted to establish the secure conversation, get the
+token and use it in further requests. Secure conversation means just
+this:<br>
+<ol>
+  <li>Send a first request with a UsernameToken (username/password), BinarySecurityToken (certificate).</li>
+  <li>The service will reply with two messages: the response of the
+original request and a RequestSecurityTokenResponse which will have the
+SecurityContextToken issued</li>
+  <li>Grab the SecurityContextToken</li>
+  <li>Send a second request with a SecurityContextToken (now there is
+no need to send UsernameToken or whatever which means more performance
+and security)</li>
+</ol>
+How this four steps are translated into code?<br>
+<br>
+1 and 2.<br>
+<pre>WseProxy proxy = <span class="kwrd">new</span> WseProxy();<br>proxy.SetClientCredential(<span class="kwrd">new</span> UsernameToken(txtUser.Text, txtPass.Text, PasswordOption.SendPlainText));<br>proxy.SetPolicy(<span class="str">"ClientPolicy"</span>);<br>SomeResponse respone = proxy.DoRequest();</pre>
+3.<br>
+<pre>SecureConversationCorrelationState correlationState = <b>proxy.ResponseSoapContext.SessionState.Get()</b>;<br><span class="kwrd">if</span> (correlationState != <span class="kwrd">null</span>)<br>{<br>     <span class="rem">// Get the SCT for the current conversation</span>
+     sct = correlationState.Token <span class="kwrd">as</span> SecurityContextToken;<br>}</pre>
+4. <br>
+<pre>WseProxy proxy = <span class="kwrd">new</span> WseProxy();<br><b>proxy.SetClientCredential(sct);</b><br>proxy.SetPolicy(<span class="str">"ClientPolicy"</span>);<br>SomeResponse respone = proxy.DoRequest();</pre>
+The trick is in the step 3 where we are getting the
+SecurityContextToken from the session state under the response soap
+context. We could store this sct in the ASP.Net Session, or in a static
+variable for Winforms and use it for further requests.<br>
+      

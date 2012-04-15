@@ -1,0 +1,78 @@
+--- 
+layout: post
+title: "HowTo: manage dynamic layouts using CAB"
+published: true
+meta: 
+  _edit_last: "24"
+  _edit_lock: "1223166482"
+tags: 
+- CAB
+type: post
+status: publish
+---
+<p class="MsoNormal">A common requirement for applications is change the layout
+of the Shell depending on certain conditions.</p>
+The best way to handle this scenario in CAB is having a <span class="SpellE"><em>DeckWorkspace</em></span> on the Shell. Then, there might be
+different layouts implemented in terms of <span class="SpellE">smartparts</span>
+that might be shown under different conditions.
+
+Let's create a simple example. Think about two layouts: the <strong>CRM
+layout</strong> and the <strong>Transactions Layout</strong>. The proposed solution could be
+extended to as many layouts as the application needs.
+
+<p class="MsoNormal">First thing is the Shell. Here we have our Primary Workspace
+of type <span class="SpellE"><em>DeckWorkspace</em></span>.</p>
+<p class="MsoNormal"><a href="http://blogs.southworks.net/mwoloski/files/2008/06/dl1.gif"><img src="http://blogs.southworks.net/mwoloski/files/2008/06/dl1-thumb.gif" border="0" alt="dl1" width="428" height="275" /></a></p>
+
+<p class="MsoNormal">Having a <span class="SpellE"><em>DeckWorkspace</em></span> will
+allow showing/hiding different layouts efficiently. This snippet of code shows
+how:</p>
+
+<div style="padding-right: 4pt;padding-left: 4pt;padding-bottom: 1pt;padding-top: 1pt"><span><span class="kwrd">private</span> <span class="kwrd">void</span> ShowLayout(){ WorkItem.Workspaces[WorkspaceNames.PrimaryWorkspace].Show(WorkItem.Items.Get(<span class="str">"Layout"</span>));}</span>
+<p class="MsoNormal" style="margin-bottom: 12pt">Each layout is a single <em>SmartPart</em></p>
+(<span class="SpellE">UserControl</span>). These layouts will hold a <em>ZoneWorkspace</em>.
+
+This type of workspace is well suited for UIs where multiple sources of
+
+information must be shown. It is similar to a <span class="SpellE">Sharepoint</span>
+
+webpage. Working with this workspace is a little tricky. You have to add Panels
+
+and assign those panels a <span class="SpellE">ZoneName</span>. Let's suppose we
+
+have the following layout for the CRM module:
+<p class="MsoNormal"><a href="http://blogs.southworks.net/mwoloski/files/2008/06/dl2.jpg"><img src="http://blogs.southworks.net/mwoloski/files/2008/06/dl2-thumb.jpg" border="0" alt="dl2" width="494" height="183" /></a></p>
+
+<p class="MsoNormal">The following code illustrates how to show different views
+
+within the <em>ZoneWorkspace</em> for this module.</p>
+
+<div style="padding-right: 4pt;padding-left: 4pt;padding-bottom: 1pt;padding-top: 1pt"><span></span>
+<p class="MsoNormal">And also, the same code applies to show a <span class="SpellE">smartpart</span> within the nested <em>TabWorkspace</em> in the same</p>
+layout. CAB is intelligent enough to detect that the Layout <span class="SpellE">smartpart</span>
+
+contains instances of <span class="SpellE"><em>IWorkspace</em></span> and add it to
+
+the <span class="SpellE">WorkItem</span> container so we can use it later.
+<div style="padding-right: 4pt;padding-left: 4pt;padding-bottom: 1pt;padding-top: 1pt"><span></span>
+<p class="MsoNormal">Finally, the next figure illustrates the layout for the <strong>Transactions
+
+module</strong>.</p>
+<p class="MsoNormal"><a href="http://blogs.southworks.net/mwoloski/files/2008/06/dl3.jpg"><img src="http://blogs.southworks.net/mwoloski/files/2008/06/dl3-thumb.jpg" border="0" alt="dl3" width="492" height="201" /></a></p>
+<p class="MsoNormal">Letâ€™s see some screenshot of this concept implemented with <a href="http://codegallery.gotdotnet.com/cab">CAB</a> and <a href="http://codegallery.gotdotnet.com/scbat">SC-BAT March CTP</a>.</p>
+<p class="MsoNormal"><a href="http://blogs.southworks.net/mwoloski/files/2008/06/dl4.jpg"><img src="http://blogs.southworks.net/mwoloski/files/2008/06/dl4-thumb.jpg" border="0" alt="dl4" width="493" height="429" /></a></p>
+<p class="MsoNormal"><a href="http://blogs.southworks.net/mwoloski/files/2008/06/dl5.jpg"><img src="http://blogs.southworks.net/mwoloski/files/2008/06/dl5-thumb.jpg" border="0" alt="dl5" width="497" height="437" /></a></p>
+<p class="MsoNormal">Download the sample solution from <a href="http://staff2.southworks.net/blogs/matiaswoloski/content/binary/DynamicLayout.zip">here</a></p>
+
+</div>
+<span class="kwrd">private</span> <span class="kwrd">void</span> ShowCustomerActionsViews(){ TabSmartPartInfo info1 = <span class="kwrd">new</span> TabSmartPartInfo(); info1.Title = <span class="str">"Summary"</span>; TabSmartPartInfo info2 = <span class="kwrd">new</span> TabSmartPartInfo(); info2.Title = <span class="str">"Tasks"</span>; WorkItem.Workspaces[WorkspaceNames.CustomerActionsWorkspace].Show(WorkItem.Items.Get(<span class="str">"CustomerSummary"</span>), info1); WorkItem.Workspaces[WorkspaceNames.CustomerActionsWorkspace].Show(WorkItem.Items.Get(<span class="str">"CustomerTasks"</span>), info2);}
+
+ 
+
+</div>
+<span class="kwrd">private</span> <span class="kwrd">void</span> ShowCustomerViews(){ ZoneSmartPartInfo info1 = <span class="kwrd">new</span> ZoneSmartPartInfo(<span class="str">"CustomerNotes"</span>); info1.Dock = DockStyle.Fill; ZoneSmartPartInfo info2 = <span class="kwrd">new</span> ZoneSmartPartInfo(<span class="str">"CustomerInfo"</span>); info2.Dock = DockStyle.Fill; WorkItem.Workspaces[WorkspaceNames.CrmLayoutWorkspace].Show(WorkItem.Items.Get(<span class="str">"CustomerNotes"</span>), info1); WorkItem.Workspaces[WorkspaceNames.CrmLayoutWorkspace].Show(WorkItem.Items.Get(<span class="str">"CustomerInfo"</span>), info2);}
+
+ 
+
+</div>
+ 

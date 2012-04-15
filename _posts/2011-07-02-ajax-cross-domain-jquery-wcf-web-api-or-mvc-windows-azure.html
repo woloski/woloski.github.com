@@ -1,0 +1,72 @@
+--- 
+layout: post
+title: Ajax, Cross Domain, jQuery, WCF Web API or MVC, Windows Azure
+published: true
+meta: 
+  _edit_last: "24"
+  _edit_lock: "1309613287"
+  _wp_old_slug: ""
+tags: 
+- Azure
+- Cross Domain
+- jQuery
+- WCF Web API
+type: post
+status: publish
+---
+<p>The title is SEO friendly as you can see <img style="border-bottom-style: none;border-left-style: none;border-top-style: none;border-right-style: none" class="wlEmoticon wlEmoticon-smile" alt="Smile" src="http://blogs.southworks.net/mwoloski/files/2011/07/wlEmoticon-smile.png">. This week, while working in a cool project, we had to explore options to expose a web API and make cross domain calls from an HTML5 client. Our specific scenario is: we develop the server API and another company is building the HTML5 client. Since we are in the development phase, we wanted to be agile and work independently from each other.&nbsp; The fact that we are using Azure and WCF Web API is an implementation detail, this can be applied to any server side REST framework and any platform.</p> <p><a href="http://blogs.southworks.net/mwoloski/files/2011/07/image3.png"><img style="border-bottom: 0px;border-left: 0px;padding-left: 0px;padding-right: 0px;border-top: 0px;border-right: 0px;padding-top: 0px" border="0" alt="image" src="http://blogs.southworks.net/mwoloski/files/2011/07/image_thumb3.png" width="480" height="388"></a></p> <p>We wanted a non-intrusive solution. This means being able to use the usual jQuery client (not learning a new client js API) and try to keep to the minimum the amount of changes in the client and server code. JSONP is an option but it does not work for POST requests. CORS is another option that I would like to try but I haven’t found a good jQuery plugin for that.</p> <p>So in the end this is what we decided to use:</p> <ul> <li>WCF Web API to implement the REST backend (works also with MVC)  <li>jQuery to query the REST backend  <li>jQuery plugin (<a href="http://flxhr.flensed.com/">flXHR from flensed</a>) that overrides the jQuery AJAX transport with a headless flash component  <li>Windows Azure w/ WebDeploy enabled to host the API</li></ul> <p>Having a working solution requires the following steps:</p> <ol> <li>Download <a href="https://github.com/getify/flensed">jQuery flXHR plugin</a> and add it to your scripts folder  <li>Download the <a href="http://flxhr.flensed.com/download.php">latest flXHR library</a>  <li>Put the cross domain policy xml file in the root of your server (change the allowed domains if you want)<br><br><pre class="brush: xml;">&lt;?xml version="1.0"?&gt;
+&lt;!DOCTYPE cross-domain-policy SYSTEM "http://www.macromedia.com/xml/dtds/cross-domain-policy.dtd"&gt;
+&lt;cross-domain-policy&gt;
+
+  &lt;allow-access-from domain="*" /&gt;
+  &lt;allow-http-request-headers-from domain="*" headers="*" /&gt;
+
+&lt;/cross-domain-policy&gt;
+</pre></li></ol>
+<p>Here is some JavaScript code that register the flXHR as a jQuery ajax transport and make an AJAX call when a button is click</p><pre class="brush: js;">&lt;script type="text/javascript"&gt;
+    var baseUrl = "http://api.cloudapp.net/";
+
+    $(function () {
+        jQuery.flXHRproxy.registerOptions(baseUrl, { xmlResponseText: false, loadPolicyURL: baseUrl + "crossdomain.xml" });
+    });
+
+    $.ajaxSetup({ error: handleError });
+
+    $("#btn").click(function () {
+        $.ajax({
+            url: baseUrl + "resources/1",
+            success: function (data) {
+                alert(data);
+            }
+        });
+    });
+
+    function handleError(jqXHR, errtype, errObj) {
+        var XHRobj = jqXHR.__flXHR__;
+        alert("Error: " + errObj.number
+        + "\nType: " + errObj.name
+        + "\nDescription: " + errObj.description
+        + "\nSource Object Id: " + XHRobj.instanceId
+    );
+    }
+&lt;/script&gt;
+</pre>
+<p>It’s important to set the ajaxSetup, otherwise POST requests will be converted to GET requests (seems like a bug in the library)</p>
+<p>Finally, make sure to include the following scripts</p><pre class="brush: xml;">&lt;script src="/Scripts/jquery-1.6.2.js" type="text/javascript"&gt;&lt;/script&gt;
+&lt;script type="text/javascript" src="/Scripts/flensed/flXHR.js"&gt;&lt;/script&gt;
+&lt;script src="/Scripts/jquery.flXHRproxy.js" type="text/javascript"&gt;&lt;/script&gt;
+</pre>
+<p>The nice thing of this solution is that you can set the baseUrl to an empty string and remove the “registerOptions” and everything will keep working just fine from the same domain using the usual jQuery client.</p>
+<p>This is the client with (default.html)</p>
+<p><a href="http://blogs.southworks.net/mwoloski/files/2011/07/image.png"><img style="border-right-width: 0px;padding-left: 0px;padding-right: 0px;border-top-width: 0px;border-bottom-width: 0px;border-left-width: 0px;padding-top: 0px" border="0" alt="image" src="http://blogs.southworks.net/mwoloski/files/2011/07/image_thumb.png" width="545" height="210"></a></p>
+<p>This is the server implemented with WCF Web API running in Azure</p>
+<p><a href="http://blogs.southworks.net/mwoloski/files/2011/07/image1.png"><img style="border-right-width: 0px;padding-left: 0px;padding-right: 0px;border-top-width: 0px;border-bottom-width: 0px;border-left-width: 0px;padding-top: 0px" border="0" alt="image" src="http://blogs.southworks.net/mwoloski/files/2011/07/image_thumb1.png" width="547" height="198"></a></p>
+<p>Turning on the network monitoring on IE9, we can see what is going on behind the scenes.</p>
+<p><a href="http://blogs.southworks.net/mwoloski/files/2011/07/image2.png"><img style="border-right-width: 0px;padding-left: 0px;padding-right: 0px;border-top-width: 0px;border-bottom-width: 0px;border-left-width: 0px;padding-top: 0px" border="0" alt="image" src="http://blogs.southworks.net/mwoloski/files/2011/07/image_thumb2.png" width="684" height="196"></a></p>
+<p>Notice the last two calls initiated by Flash. The first one downloading the crossdomain policy file and then the actual call to the API.</p>
+<p>Some gotchas:</p>
+<ul>
+<li>I wasn’t able to send http headers (via beforeSend). This means that you can’t set the Accept header, it will always be */*</li>
+<li>There is no support for other verbs than GET/POST (this is a Flash limitation)</li></ul>
+<p>I uploaded the small <a href="http://snipurl.com/wcf-web-api-jquery-crossdomain">proof of concept here</a>.</p>
+<p>Enjoy!</p>

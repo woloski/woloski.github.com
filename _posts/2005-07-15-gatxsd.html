@@ -1,0 +1,63 @@
+--- 
+layout: post
+title: Xsd Generator with GAT (generate a class from an xml schema)
+published: true
+meta: {}
+
+tags: 
+- CoolStuff
+- GAT
+- Xml
+type: post
+status: publish
+---
+
+        <p class="MsoNormal" style="margin: 0in 0in 0pt"><font face="Times New Roman" size="3"><font color="#ff3300"><strong>UPDATE: I've updated the GAT package and created the </strong></font><a href="http://workspaces.gotdotnet.com/xsdgat"><font color="#ff3300"><strong>GotDotNet workspace</strong></font></a><font color="#ff3300"><strong>. See this </strong></font><a HREF="/blogs/matiaswoloski/archive/2005/09/04/XsdGat2.aspx"><font color="#ff3300"><strong>post</strong></font></a><font color="#ff3300"><strong>.</strong></font></font></p>
+<p class="MsoNormal" style="margin: 0in 0in 0pt"><font color="#000000" face="Times New Roman" size="3"></font> </p>
+<p class="MsoNormal" style="margin: 0in 0in 0pt"><font color="#000000" face="Times New Roman" size="3">I've started working on </font><a title="http://lab.msdn.microsoft.com/teamsystem/workshop/gat/" href="http://lab.msdn.microsoft.com/teamsystem/workshop/gat/"><font face="Times New Roman" size="3">GAT</font></a><font color="#000000" face="Times New Roman" size="3"> recipes because of a project called blueprint that we are doing here at <a href="http://www.southworks.net/">Southworks</a>.</font></p>
+<p class="MsoNormal" style="margin: 0in 0in 0pt"><font color="#000000" face="Times New Roman" size="3"> </font></p>
+<p class="MsoNormal" style="margin: 0in 0in 0pt"><font color="#000000" face="Times New Roman" size="3">So here is my first attempt. After 1 day Iâ€™ve built something that would have been very useful in the old days.</font></p>
+<p class="MsoNormal" style="margin: 0in 0in 0pt"><font color="#000000" face="Times New Roman" size="3">The
+recipe is a simple xsd to class generator by just right-click on *.xsd
+files (no wizards, no input). I thought that Whidbey was going to
+improve </font><a title="http://msdn.microsoft.com/library/en-us/cptools/html/cpconXMLSchemaDefinitionToolXsdexe.asp" href="http://msdn.microsoft.com/library/en-us/cptools/html/cpconXMLSchemaDefinitionToolXsdexe.asp"><font face="Times New Roman" size="3">xsd.exe</font></a><font color="#000000" face="Times New Roman" size="3"> but it didnâ€™t. It is just the same as before but with property generation instead of fields.</font></p>
+<p class="MsoNormal" style="margin: 0in 0in 0pt"><font color="#000000" face="Times New Roman" size="3">Today there are <a href="http://www.microsoft.com/downloads/details.aspx?FamilyID=89e6b1e5-f66c-4a4d-933b-46222bb01eb0&amp;DisplayLang=en">some</a> <a href="http://weblogs.asp.net/cazzu/archive/2004/05/14/XsdCodeGenTool.aspx">of</a> these tools already, but I always wanted to have my own â€œxsd.exeâ€ to customize it a piacere.</font></p>
+<p class="MsoNormal" style="margin: 0in 0in 0pt"><font color="#000000" face="Times New Roman" size="3">So I picked this idea from this </font><a title="http://msdn.microsoft.com/xml/default.aspx?pull=/library/en-us/dnxmlnet/html/xsdcodegen.asp" href="http://msdn.microsoft.com/xml/default.aspx?pull=/library/en-us/dnxmlnet/html/xsdcodegen.asp"><font face="Times New Roman" size="3">article in msdn</font></a><font color="#000000" face="Times New Roman" size="3"> (written by </font><a title="http://weblogs.asp.net/cazzu/archive/2004/05/14/XsdCodeGenTool.aspx" href="http://weblogs.asp.net/cazzu/archive/2004/05/14/XsdCodeGenTool.aspx"><font face="Times New Roman" size="3">kzu</font></a><font color="#000000" face="Times New Roman" size="3">) and created my guidance package.</font></p>
+<p class="MsoNormal" style="margin: 0in 0in 0pt"><font color="#000000" face="Times New Roman" size="3"> </font></p>
+<p class="MsoNormal" style="margin: 0in 0in 0pt"><font color="#000000" face="Times New Roman" size="3">This
+is a very first version that generates a c# entity by right clicking
+the xsd on a project. It still needs some refactoring, some fixes and
+some missing features, but it works. My assignment was to make a proof
+of concept on the <a href="http://lab.msdn.microsoft.com/teamsystem/workshop/gat/">GAT </a>technology and provide feedback about it to the blueprint architect. We believe that <a href="http://lab.msdn.microsoft.com/teamsystem/workshop/gat/">GAT</a> recipes are great because they are more user friendly than using VS external tools.</font></p>
+<p class="MsoNormal" style="margin: 0in 0in 0pt"><font color="#000000" face="Times New Roman" size="3"> </font></p>
+<p class="MsoNormal" style="margin: 0in 0in 0pt"><font color="#000000" face="Times New Roman" size="3">The current features are:</font></p>
+<ul>
+<li>
+<div class="MsoNormal" style="margin: 0in 0in 0pt"><font color="#000000" face="Times New Roman" size="3">Generates c# class/es by right click on the xsd on a project </font></div>
+</li><li>
+<div class="MsoNormal" style="margin: 0in 0in 0pt"><font color="#000000" face="Times New Roman" size="3">Uses System.Collections.Generic.List instead of arrays </font></div>
+</li><li>
+<div class="MsoNormal" style="margin: 0in 0in 0pt"><font color="#000000" face="Times New Roman" size="3">Lazy initialization of generic collections (on property getters)</font></div>
+</li><li>
+<div class="MsoNormal" style="margin: 0in 0in 0pt"><font color="#000000" face="Times New Roman" size="3">Class takes the default namespace of the project</font></div></li></ul>
+<p class="MsoNormal" style="margin: 0in 0in 0pt"><font color="#000000" face="Times New Roman" size="3"> </font><font color="#000000" face="Times New Roman" size="3">Coming features:</font></p>
+<ul>
+<li>
+<div class="MsoNormal" style="margin: 0in 0in 0pt"><font color="#000000" face="Times New Roman" size="3">Right click the project and generates all classes for every xsd on the project </font></div>
+</li><li>
+<div class="MsoNormal" style="margin: 0in 0in 0pt"><font color="#000000" face="Times New Roman" size="3">Another command bar to generate in vb.net </font></div></li></ul>
+<p class="MsoNormal" style="margin: 0in 0in 0pt"><font color="#000000" face="Times New Roman" size="3"> </font><font color="#000000" face="Times New Roman" size="3">Known bugs:</font></p>
+<ul>
+<li>
+<div class="MsoNormal" style="margin: 0in 0in 0pt"><font color="#000000" face="Times New Roman" size="3">Generate for a second time if the target file already exist will throw an exception </font></div></li></ul>
+<p class="MsoNormal" style="margin: 0in 0in 0pt"><font color="#000000" face="Times New Roman" size="3">Requirements:</font></p>
+<ul>
+<li class="MsoNormal"><font color="#000000" face="Times New Roman" size="3">Visual Studion 2005 (Whidbey)</font> 
+</li><li class="MsoNormal"><font color="#000000" face="Times New Roman" size="3">Guidance Automation Extensions (GAX): <a href="http://www.microsoft.com/downloads/details.aspx?FamilyId=C0A394C0-5EEB-47C4-9F7B-71E51866A7ED&amp;displaylang=en">http://www.microsoft.com/downloads/details.aspx?FamilyId=C0A394C0-5EEB-47C4-9F7B-71E51866A7ED&amp;displaylang=en</a></font></li></ul>
+<p class="MsoNormal" style="margin: 0in 0in 0pt"><font color="#000000" face="Times New Roman" size="3">Download the MSI and install the GAT package </font><a href="/blogs/matiaswoloski/content/binary/XsdToEntityPackageSetup.zip">XsdToEntityPackageSetup.zip (202.49 KB)</a></p>
+<p class="MsoNormal" style="margin: 0in 0in 0pt"> </p>
+<p class="MsoNormal" style="margin: 0in 0in 0pt">Remember to enable
+the package in vs 2005: Tools -&gt; Guidance Package Manager -&gt;
+Enable/Disable Packages. Choose the one that says â€œGenerates a class
+from xsdâ€.</p>
+      

@@ -1,0 +1,40 @@
+--- 
+layout: post
+title: "How To: Generate FederationMetadata for a passive STS with Geneva Framework"
+published: true
+meta: 
+  _edit_lock: "1259912525"
+  _edit_last: "24"
+tags: 
+- Federation
+- Geneva
+- Identity
+type: post
+status: publish
+---
+<strong>UPDATE</strong>: the code has been updated to work with WIF RTM. Thanks <a href="http://blogs.southworks.net/npaez">Nico</a>!
+
+Providing the federation metadata for your STS will be very useful when a relying party want to establish a trust relationship with your STS. For instance, the Geneva Framework provides a FedUtil.exe tool that allows you to point to this metadata file and configure the relying party changing the microsoft.identityModel section (read more about the metadata format here: <a href="http://www.oasis-open.org/committees/download.php/30005/ws-federation-1.2-spec-ed-09.doc">http://www.oasis-open.org/committees/download.php/30005/ws-federation-1.2-spec-ed-09.doc</a>)
+
+The metadata is signed with the STS private key, which make sense because you don't want someone else publishing a metadata file and claiming that it's your STS metadata. That means that you will need some code in order to generate that signature based on the metadata content.
+
+Well I have good news for you. Microsoft Geneva Framework provides a couple of useful classes (like MetadataSerializer) to generate the metadata.
+<strong><em>Disclaimer: this code generates a simple version of federation metadata for an IP passive STS (it does not include WS-Trust endpoints for active profile for instance). </em></strong>
+<div>
+<pre style="padding-bottom: 0px;margin: 0em;padding-left: 0px;width: 100%;padding-right: 0px;font-family: consolas, 'Courier New', courier, monospace;color: black;font-size: 8pt;padding-top: 0px">var stsUri = <span style="color: #0000ff">new</span> Uri(<span style="color: #006080">"https://login.mysts.com/FederationPassive"</span>);
+<span style="color: #0000ff">string</span> destFolder = <span style="color: #006080">@"d:\Temp\";
+string signingCertificateSubjectName = "</span>CN=localhost<span style="color: #006080">";
+var claimsOffered = new DisplayClaim[]
+{
+    CreateDisplayClaim("</span>http:<span style="color: #008000">//schemas.xmlsoap.org/claims/Group", false, "Group", string.Empty),</span>
+    CreateDisplayClaim(<span style="color: #006080">"http://schemas.xmlsoap.org/claim/Issuer"</span>, <span style="color: #0000ff">false</span>, <span style="color: #006080">"Issuer"</span>, <span style="color: #0000ff">string</span>.Empty),
+    CreateDisplayClaim(<span style="color: #006080">"http://schemas.xmlsoap.org/claim/Email"</span>, <span style="color: #0000ff">false</span>, <span style="color: #006080">"Email"</span>, <span style="color: #0000ff">string</span>.Empty),
+    CreateDisplayClaim(<span style="color: #006080">"http://schemas.xmlsoap.org/claim/FirstName"</span>, <span style="color: #0000ff">false</span>, <span style="color: #006080">"FirstName"</span>, <span style="color: #0000ff">string</span>.Empty),
+    CreateDisplayClaim(<span style="color: #006080">"http://schemas.xmlsoap.org/claim/LastName"</span>, <span style="color: #0000ff">false</span>, <span style="color: #006080">"LastName"</span>, <span style="color: #0000ff">string</span>.Empty),
+    CreateDisplayClaim(<span style="color: #006080">"http://schemas.xmlsoap.org/claim/CostCenter"</span>, <span style="color: #0000ff">false</span>, <span style="color: #006080">"CostCenter"</span>, <span style="color: #0000ff">string</span>.Empty),
+    CreateDisplayClaim(<span style="color: #006080">"http://schemas.xmlsoap.org/claim/Phone"</span>, <span style="color: #0000ff">false</span>, <span style="color: #006080">"Phone"</span>, <span style="color: #0000ff">string</span>.Empty)
+};
+
+CreatePassiveStsMetadata(stsUri, signingCertificateSubjectName, claimsOffered, destFolder);</pre>
+</div>
+The code above shows the usage for a sample STS. Download the code from <a href="http://snipurl.com/federationmetadata">here</a>

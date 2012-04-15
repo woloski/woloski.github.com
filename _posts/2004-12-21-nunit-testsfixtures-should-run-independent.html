@@ -1,0 +1,17 @@
+--- 
+layout: post
+title: Nunit [TestsFixtures] should run independent
+published: true
+meta: {}
+
+tags: 
+- TestDriven
+type: post
+status: publish
+---
+
+        <P>Surfing the blogs I found <A href="http://weblogs.asp.net/jamesnewkirk/">James Newkirk's</A>, one of the writers of <A href="http://nunit.org/">NUnit</A>. </P>
+<P>Some months ago while I was in Mexico showing how NUnit works someone asked me about the independence of each test and the order of execution. Since I didn't know the answer, I answered this guy basing on my experience with <A href="http://junit.org/">JUnit</A>: â€œI THINK they run independent and the order is not relevantâ€. However, I had to step back after writing an example fixture.</P>
+<P>Now I found this <A href="http://weblogs.asp.net/jamesnewkirk/archive/2004/12/04/275172.aspx">post of James</A> where he talks about this issue.</P>
+<P><STRONG>In conclusion</STRONG>: They wrote it wrong. Each testfixture is created and share the member variables defined in the fixture. This is good if you want to do functional testing and not unit testing because you can test a workflow and share state between test methods. However, the order of the methods is never configured, making it unusable for functional testing. To make the long story short, <A href="http://www.charliepoole.org/">Charlie Poole</A>, who is the guy in charge of NUnit is asking whether we want testfixture to run independent or not. I VOTE YES! MAKE IT WORK THE SAME AS JUNIT IF YOU WANT A UNIT TESTING FRAMEWORK!</P>
+      

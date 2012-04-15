@@ -1,0 +1,12 @@
+--- 
+layout: post
+title: CAB Outlook bar
+published: true
+meta: {}
+
+tags: 
+- CAB
+type: post
+status: publish
+---
+<p><a href="http://www.chrisholmesonline.com/">Chris Holmes</a>, an active member of the <a href="http://www.gotdotnet.com/codegallery/codegallery.aspx?id=22f72167-af95-44ce-a6ca-f2eafbf2653c">CAB messageboards</a>, blogged about    <br />how to <a href="http://www.chrisholmesonline.com/2006/04/21/cab-outlookbar/">create an outlook bar</a> and the corresponding CAB classes. Here you have a snapshot:</p>  <p><a href="http://blogs.southworks.net/mwoloski/files/2008/06/outlookbar.jpg"><img height="265" alt="outlookbar" src="http://blogs.southworks.net/mwoloski/files/2008/06/outlookbar-thumb.jpg" width="197" border="0" /></a> </p>  <p>You can register the Outlook Bar...</p>  <p><code>     <br />OutlookBar outlookBar = RootWorkItem.Items.AddNew&lt;OutlookBar&gt;();</code>    <p>RootWorkItem.UIExtensionSites.RegisterSite(&quot;OutlookBar&quot;, outlookBar);</p>    <p></p> Then you can add/remove buttons to the bar...</p>  <p><code>     <br />Button button = new Button();</code>    <p>button.Text = &quot;Payroll&quot;;</p>    <p>button.Image = MyProject.Modules.Payroll.Properties.Resources.payroll;</p>    <p>RootWorkItem.UIExtensionSites[&quot;OutlookBar&quot;].Add</p> (button);     <p></p>    <p>RootWorkItem.Commands[&quot;LoadPayrollWorkItem&quot;].AddInvoker(button, &quot;Click&quot;);</code></p>    <p>...and smartparts as well.</p>    <p><code>       <br />SomeSmartPart smartPart = this.Items.AddNew(&quot;OutlookBarSmartPart&quot;);</code>      <p>RootWorkItem.Workspaces[&quot;OutlookBarDeckWorkspace&quot;].Show(smartPart);</p>      <p></p> Finally, another way to design this control is by creating a      <br />custom IWorkspace that accepts a smartpart and a smartpartinfo that      <br />holds the button information so you can do something like this:</p>    <p><code>OutlookBarSmartPartInfo info = new </code><code>OutlookBarSmartPartInfo();</code>      <p>info.Text = &quot;Payroll&quot;;</p>      <p></p>     <code>info</code><code>.Image = MyProject.Modules.Payroll.Properties.Resources.payroll;</code></p>    <p><code>RootWorkItem.Workspaces[&quot;OutlookBar&quot;].Show(smartPart, </code><code>info</code><code>);</code></p></p>

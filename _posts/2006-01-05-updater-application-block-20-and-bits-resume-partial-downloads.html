@@ -1,0 +1,95 @@
+--- 
+layout: post
+title: "Updater Application Block 2.0 and BITS: resume partial downloads"
+published: true
+meta: {}
+
+tags: []
+
+type: post
+status: publish
+---
+
+        <div><span class="330582113-05012006"><font face="Arial" size="2"><strong>Problem</strong></font></span></div>
+
+<div><span class="330582113-05012006"></span> </div>
+
+<div><span class="330582113-05012006"><font face="Arial" size="2">UAB does not resume 
+broken downloads (due to connection failure or user cancelling the 
+download).</font></span></div>
+
+<div><span class="330582113-05012006"></span> </div>
+
+<div><span class="330582113-05012006"><font face="Arial" size="2"><strong>Solution</strong></font></span></div>
+
+<div><span class="330582113-05012006"></span> </div>
+
+<div><span class="330582113-05012006"><font face="Arial" size="2">These are the two 
+changes to do in the <em>BitsDownloader</em> class</font></span></div>
+
+<div><span class="330582113-05012006"></span> </div>
+
+<div><span class="330582113-05012006"><font face="Arial" size="2">1. On the 
+<em>OnJobError</em> method we need to NOT cancel the BITS job if the state is 
+ERROR:</font></span></div>
+
+<div><span class="330582113-05012006"></span> </div>
+
+<div><span class="330582113-05012006"><font face="Courier New" size="2">if( state != 
+BG_JOB_STATE.BG_JOB_STATE_ACKNOWLEDGED &amp;&amp;<br>     state != 
+BG_JOB_STATE.BG_JOB_STATE_CANCELLED &amp;&amp;<br>     state != 
+BG_JOB_STATE.BG_JOB_STATE_TRANSFERRING &amp;&amp;      // don't interrupt 
+downloads in progress<br>     state != BG_JOB_STATE.BG_JOB_STATE_TRANSFERRED 
+&amp;&amp;      // don't cancel a finished download<br>     state != 
+BG_JOB_STATE.BG_JOB_STATE_TRANSIENT_ERROR &amp;&amp;   // don't cancel when 
+connection problems<br>     state != BG_JOB_STATE.BG_JOB_STATE_ERROR ) 
+{            // don't cancel when connection problems<br>     
+pJob.Cancel();<br> }</font></span></div>
+
+<div><span class="330582113-05012006"></span> </div>
+
+<div><span class="330582113-05012006"><font face="Arial" size="2">2. On the 
+<em>CheckForResumeAndProceed</em> method check to see if the job is in ERROR or 
+TRANSIENT_ERROR state and resume it. Why add this here? Because this method 
+checks if there is a pending job. If there is a pending job and its state is 
+ERROR, that means that the pending job failed due to a network failuire, or user 
+aborted the application. If we call <em>Resume</em> BITS try to connect again. 
+It will try to connect for 5 secs (NoProgressTimeout constant). If it couldn't 
+do it, the job will stay in ERROR state. If not, it will transfer from the last 
+byte transferred.</font></span></div>
+
+<div><span class="330582113-05012006"><font face="Arial" size="2">The code in bold 
+letter need to be added</font></span></div>
+
+<div><span class="330582113-05012006"></span> </div>
+
+<div><span class="330582113-05012006"><font face="Courier New" size="2">if ( 
+jobState == BG_JOB_STATE.BG_JOB_STATE_TRANSFERRED )<br>{<br>       
+OnJobTransferred( task, copyJob );<br>       return true;<br>}<br><strong>if ( 
+jobState == BG_JOB_STATE.BG_JOB_STATE_ERROR || jobState == 
+BG_JOB_STATE.BG_JOB_STATE_TRANSIENT_ERROR ) { <br>       
+copyJob.Resume();<br>}</strong></font></span></div>
+
+<div><span class="330582113-05012006"></span> </div>
+
+<div><span class="330582113-05012006"><font face="Arial" size="2"><strong>Observations</strong></font></span></div>
+
+<ul>
+<li><span class="330582113-05012006"><font face="Arial" size="2">This new code was 
+tested in this scenarios: stopping the website; disabling the network card and 
+aborting the application in the middle of the job, and it worked on all the 
+scenarios. The job was resumed from the last byte transfered</font></span> 
+</li><li><span class="330582113-05012006"> <font face="Arial" size="2">It's important to 
+attach to the <em>PendingUpdatesDetected</em> event of the 
+ApplicationUpdaterManager. On the handler of this event call 
+<em>ResumePendingUpdates. </em>This is important because this method 
+deserializes the tasks that holds the BITS Job ID previously 
+aborted.</font></span> 
+</li><li><span class="330582113-05012006"><font face="Arial" size="2">It is not recommended 
+to debug the <em>WaitForDownload</em> method due to concurrency and sync issues. 
+Instead, tracing is recommended. A simple tracing could be implemented to 
+troubleshoot, just by using the <em>Logger.LogInformation</em> method that will 
+write to the Event Viewer.</font></span></li>
+</ul>
+
+      

@@ -1,0 +1,117 @@
+--- 
+layout: post
+title: Adding Internet Identity Providers like Facebook, Google, LiveID and Yahoo to your MVC web application using Windows Azure AppFabric Access Control Service and jQuery in 3 steps
+published: true
+meta: 
+  _edit_last: "24"
+  _edit_lock: "1334432590"
+  _wp_old_slug: ""
+tags: 
+- Access Control Service
+- Federation
+- Identity
+- Windows Identity Foundation
+type: post
+status: publish
+---
+<p>If you want to achieve a login user experience like the one shown in the following screenshot, then keep reading…</p> <p><a href="http://blogs.southworks.net/mwoloski/files/2011/04/image19.png"><img style="border-bottom: 0px;border-left: 0px;padding-left: 0px;padding-right: 0px;border-top: 0px;border-right: 0px;padding-top: 0px" border="0" alt="image" src="http://blogs.southworks.net/mwoloski/files/2011/04/image_thumb17.png" width="619" height="480"></a></p> <p>Windows Azure AppFabric Access Control 2.0 has been released last week after one year in the Labs environment and it was officially announced today at <a href="http://live.visitmix.com">MIX</a>. If you haven’t heard about it yet, here is the elevator pitch of ACS v2:</p> <blockquote> <p><em>Windows Azure AppFabric Access Control Service (ACS) is a cloud-based service that provides an easy way of authenticating and authorizing users to gain access to your web applications and services while allowing the features of authentication and authorization to be factored out of your code. Instead of implementing an authentication system with user accounts that are specific to your application, you can let ACS orchestrate the authentication and much of the authorization of your users. ACS integrates with standards-based identity providers, including enterprise directories such as Active Directory, and web identities such as Windows Live ID, Google, Yahoo!, and Facebook</em></p></blockquote> <p>According to the <a href="http://blogs.msdn.com/b/windowsazureappfabric/archive/2011/04/11/announcing-the-commercial-release-of-windows-azure-appfabric-caching-and-access-control.aspx">blog published today by the AppFabric team</a> you can use this service for free (at least throughout Jan 2012). Also the Labs environment are still available for testing purposes (not sure when they will turn this off).</p> <blockquote> <p><em>We encourage you to try the new version of the service and will be offering the service at no charge during a promotion period ending January 1, 2012. </em></p></blockquote> <p>Now that we can use this for real, in this post I will show you how to create a little widget that will allow users of your website to login using social identity providers like Google, Facebook, LiveId or Yahoo. In this post I will go through the process of creating such experience for your website.</p> <p>I will use an MVC Web Application, but this can be implemented in WebForms also or even WebMatrix if you understand the implementation details</p> <h2>Step 1. Configure Windows Azure AppFabric Access Control Service</h2> <ol> <li>Create a new Service Namespace in <a href="http://portal.appfabriclabs.com">portal.appfabriclabs.com</a> or if you have an Azure subscription use the production version at <a href="http://windows.azure.com">windows.azure.com</a><br><br><a href="http://blogs.southworks.net/mwoloski/files/2011/04/image51.png"><img style="border-bottom: 0px;border-left: 0px;padding-left: 0px;padding-right: 0px;border-top: 0px;border-right: 0px;padding-top: 0px" border="0" alt="image" src="http://blogs.southworks.net/mwoloski/files/2011/04/image5_thumb.png" width="626" height="484"></a><br> <li>The service namespace will be activated in a few minutes. Select it and click on Access Control Service to open the management console for that service namespace.  <li>In the management console go to Identity Providers and add Google, Yahoo and Facebook (LiveID is added by default). It’s very straightforward to do it. This is the information you have to provide for each of them. I just googled for the logos and some of them are not the best quality, so feel free to change them  <ul> <li>Google  <ul> <li>Login Text: Google  <li>Image Url: <a title="http://www.google.com/images/logos/ps_logo2.png" href="http://www.google.com/images/logos/ps_logo2.png">http://www.google.com/images/logos/ps_logo2.png</a></li></ul> <li>Yahoo  <ul> <li>Login Text: Yahoo  <li>Image Url: <a title="http://a1.twimg.com/profile_images/1178764754/yahoo_logo_twit_normal.jpg" href="http://a1.twimg.com/profile_images/1178764754/yahoo_logo_twit_normal.jpg">http://a1.twimg.com/profile_images/1178764754/yahoo_logo_twit_normal.jpg</a></li></ul> <li>Facebok / Display Name: Facebook  <ul> <li>Application Id: …… (follow <a href="http://go.microsoft.com/fwlink/?LinkID=196518">this tutorial</a> to get one)  <li>Application secret: idem  <li>Application permissions: email (you can request more things from here <a title="http://developers.facebook.com/docs/authentication/permissions/" href="http://developers.facebook.com/docs/authentication/permissions/">http://developers.facebook.com/docs/authentication/permissions/</a>)  <li>Image Url: <a title="https://secure-media-sf2p.facebook.com/ads3/creative/pressroom/jpg/n_1234209334_facebook_logo.jpg" href="https://secure-media-sf2p.facebook.com/ads3/creative/pressroom/jpg/n_1234209334_facebook_logo.jpg">https://secure-media-sf2p.facebook.com/ads3/creative/pressroom/jpg/n_1234209334_facebook_logo.jpg</a><br><br><a href="http://blogs.southworks.net/mwoloski/files/2011/04/image171.png"><img style="border-bottom: 0px;border-left: 0px;padding-left: 0px;padding-right: 0px;border-top: 0px;border-right: 0px;padding-top: 0px" border="0" alt="image" src="http://blogs.southworks.net/mwoloski/files/2011/04/image17_thumb.png" width="644" height="288"></a>&nbsp;</li></ul></li></ul> <li>The next thing is to register the web application you just created in ACS. To do this, go to <strong>Relying party applications</strong> and click <strong>Add</strong>.  <li>Enter the following information<br><strong>Name</strong>: a display name for ACS<br><strong>Realm</strong>: <a href="https://localhost/&lt;TheNameOfTheWebApp&gt;/">https://localhost/&lt;TheNameOfTheWebApp&gt;/</a> <br><em>This is the logical identifier for the app. For this, we can use any valid URI (notice the I instead of L). Using the base url of your app is a good idea in case you want to have one configuration for each environment.</em><br>Return Url: <a href="https://localhost/&lt;TheNameOfTheWebApp&gt;/">https://localhost/&lt;TheNameOfTheWebApp&gt;/</a><br><em>This is the url where the token will be posted to. Since there will be an http module listen for any HTTP POST request coming in with a token, you can use any valid url of the app. The root is a good choice and, don’t worry, then you can redirect the user back to the original url she was browsing (in case of bookmarking).</em><br><br><a href="http://blogs.southworks.net/mwoloski/files/2011/04/image21.png"><img style="border-bottom: 0px;border-left: 0px;padding-left: 0px;padding-right: 0px;border-top: 0px;border-right: 0px;padding-top: 0px" border="0" alt="image" src="http://blogs.southworks.net/mwoloski/files/2011/04/image21_thumb.png" width="644" height="396"></a><br> <li>Leave the other fields with the default values and click Save. You will notice that Facebook, Google, LiveID and Yahoo are checked. This means that you want to enable those identity providers for this application. If you uncheck one of those, the widget won’t show it.<br><a href="http://blogs.southworks.net/mwoloski/files/2011/04/image25.png"><img style="border-bottom: 0px;border-left: 0px;padding-left: 0px;padding-right: 0px;border-top: 0px;border-right: 0px;padding-top: 0px" border="0" alt="image" src="http://blogs.southworks.net/mwoloski/files/2011/04/image25_thumb.png" width="644" height="388"></a><br> <li>Finally, go to the Rule Groups and click on the rule group for your web application.<br><a href="http://blogs.southworks.net/mwoloski/files/2011/04/image29.png"><img style="border-bottom: 0px;border-left: 0px;padding-left: 0px;padding-right: 0px;border-top: 0px;border-right: 0px;padding-top: 0px" border="0" alt="image" src="http://blogs.southworks.net/mwoloski/files/2011/04/image29_thumb.png" width="644" height="356"></a><br> <li>Since each identity provider will give us different information (claims about the user), we have to generate a set of rules to passthrough that information to our application. Otherwise by default that won’t happen. To do this, click on Generate, make sure all the identity providers are checked and save. You should see a screen like this<br><br><a href="http://blogs.southworks.net/mwoloski/files/2011/04/image33.png"><img style="border-bottom: 0px;border-left: 0px;padding-left: 0px;padding-right: 0px;border-top: 0px;border-right: 0px;padding-top: 0px" border="0" alt="image" src="http://blogs.southworks.net/mwoloski/files/2011/04/image33_thumb.png" width="578" height="484"></a><br>&nbsp;</li></ol> <h2>Step 2. Configure your application with Windows Azure AppFabric Access Control Service</h2> <ol> <li>Now that we have configured ACS, we have to go to our application and configure it to use ACS. <br> <li>Create a new ASP.NET MVC Application. Use the Internet Application template to get the master page, controllers, etc.<br><strong>NOTE</strong>: I am using MVC3 with Razor but you can use any version.<br> <li>Before moving forward, make sure you have <a href="http://www.google.com.ar/url?sa=t&amp;source=web&amp;cd=1&amp;ved=0CCMQFjAA&amp;url=http%3A%2F%2Fwww.microsoft.com%2Fdownloads%2Fdetails.aspx%3FFamilyID%3Dc148b2df-c7af-46bb-9162-2c9422208504&amp;ei=x6CgTa-iF83AtgeDmc2dAw&amp;usg=AFQjCNGi5gK8PJ2vTTdRqID3ljBoxJi9vg&amp;sig2=ZGDEfHOgYeu384M5QwsRJw">Windows Identity Foudnation SDK</a> installed in your machine. Once you have it, then right click the web application and click <strong>Add STS Reference…</strong>. In the first step you will have already the right values so click <strong>Next<br></strong><strong><br><a href="http://blogs.southworks.net/mwoloski/files/2011/04/image10.png"><img style="border-bottom: 0px;border-left: 0px;margin: 0px;padding-left: 0px;padding-right: 0px;border-top: 0px;border-right: 0px;padding-top: 0px" border="0" alt="image" src="http://blogs.southworks.net/mwoloski/files/2011/04/image_thumb8.png" width="644" height="484"></a><br></strong> <li>In the next step, select <strong>Use an existing STS</strong>. Enter the url of your service namespace Federation Metadata. This URL has a pattern like this:<br><a title="https://mywebapp.accesscontrol.appfabriclabs.com/FederationMetadata/2007-06/FederationMetadata.xml" href="https://&lt;YourServiceNamespace&gt;.accesscontrol.appfabriclabs.com/FederationMetadata/2007-06/FederationMetadata.xml">https://&lt;YourServiceNamespace&gt;.accesscontrol.appfabriclabs.com/FederationMetadata/2007-06/FederationMetadata.xml</a><br><br>&nbsp;<a href="http://blogs.southworks.net/mwoloski/files/2011/04/image11.png"><img style="border-bottom: 0px;border-left: 0px;margin: 0px;padding-left: 0px;padding-right: 0px;border-top: 0px;border-right: 0px;padding-top: 0px" border="0" alt="image" src="http://blogs.southworks.net/mwoloski/files/2011/04/image_thumb9.png" width="644" height="484"></a> <br> <li>In the following steps go ahead and click <strong>Next</strong> until the wizard finishes. <br> <li>The wizard will add a couple of http modules and a section on the web.config that will have the thumbprint of the certificate that ACS will use to sign tokens. This is the basis of the trust relationship between your app and ACS. If you change that number, it means the trust is broken.<br> <li>The next thing you have to do is replace the default <strong>AccountController</strong> with one that works when the authentication is outsourced of the app. Download the <a href="https://gist.github.com/911826#file_account_controller.cs">AccountController.cs</a>, change the namespace to yours and replace it. Among other things, this controller will have an action called IdentityProviders that will return from ACS the list of identity providers in JSON format.<br><br><pre class="brush: csharp;">public ActionResult IdentityProviders(string serviceNamespace, string appId)
+{
+    string idpsJsonEndpoint = string.Format(IdentityProviderJsonEndpoint, serviceNamespace, appId);
+    var client = new WebClient();
+    var data = client.DownloadData(idpsJsonEndpoint);
+
+    return Content(Encoding.UTF8.GetString(data), "application/json");
+}
+</pre></li></ol>
+<h2>Step 3. Using jQuery Dialog for the login box</h2>
+<ol>
+<li>In this last step we will use the jQuery UI dialog plugin to show the list of identity providers when clicking the LogOn link. Open the LogOnPartial cshtml file<br><br><a href="http://blogs.southworks.net/mwoloski/files/2011/04/image12.png"><img style="border-bottom: 0px;border-left: 0px;padding-left: 0px;padding-right: 0px;border-top: 0px;border-right: 0px;padding-top: 0px" border="0" alt="image" src="http://blogs.southworks.net/mwoloski/files/2011/04/image_thumb10.png" width="278" height="327"></a><br>
+<li>Replace the LogOnPartial markup with the following (or copy from <a href="https://gist.github.com/911826#file__log_on_partial.cshtml">here</a>). <strong>IMPORTANT</strong>: change the service namespace and appId in the ajax call to use your settings.<br><br><pre class="brush: js;">@if(Request.IsAuthenticated) {
+    &lt;text&gt;Welcome &lt;b&gt;@Context.User.Identity.Name&lt;/b&gt;!
+    [ @Html.ActionLink("Log Off", "LogOff", "Account") ]&lt;/text&gt;
+}
+else {
+    &lt;a href="#" id="logon"&gt;Log On&lt;/a&gt;
+    &lt;div id="popup_logon"&gt;        
+    &lt;/div&gt;
+    &lt;style type="text/css"&gt;
+    #popup_logon ul
+    {
+        list-style: none;
+    }
+    #popup_logon ul li
+    {
+         margin: 10px;
+         padding: 10px
+    }
+    &lt;/style&gt;
+    &lt;script type="text/javascript"&gt;    
+    $("#logon").click(function() {
+        $("#popup_logon").html("&lt;p&gt;Loading...&lt;/p&gt;");
+        $("#popup_logon").dialog({ modal: true, draggable: false, resizable: false, title: 'Select your preferred login method' });  
+        $.ajax({
+            url : '@Html.Raw(Url.Action("IdentityProviders", "Account", new { serviceNamespace = "YourServiceNamespace", appId = "https://localhost/&lt;YourWebApp&gt;/" }))',
+            success : function(data){
+                dialogHtml = '&lt;ul&gt;';
+                for (i=0; i&lt;data.length; i++) 
+                {
+                    dialogHtml += '&lt;li&gt;';
+                    if (data[i].ImageUrl == '') 
+                    {                  
+                        dialogHtml += '&lt;a href="' + data[i].LoginUrl + '"&gt;' + data[i].Name + '&lt;/a&gt;';
+                    } else 
+                    {
+                        dialogHtml += '&lt;a href="' + data[i].LoginUrl + '"&gt;&lt;img style="border: 0px; width: 100px" src="' + data[i].ImageUrl + '" alt="' + data[i].Name + '" /&gt;&lt;/a&gt;'; 
+                    }
+
+                    dialogHtml += '&lt;/li&gt;';
+                }
+
+                dialogHtml += '&lt;/ul&gt;';
+
+                $("#popup_logon").html(dialogHtml);                          
+            }
+        })
+     });
+
+    &lt;/script&gt;
+    
+}</pre>
+<li>Include jQuery UI and the corresponding css in the Master page (Layout.cshtml)<br><pre class="brush: xml;">&lt;link href="@Url.Content("~/Content/Site.css")" rel="stylesheet" type="text/css" /&gt;
+&lt;link href="@Url.Content("~/Content/themes/base/jquery-ui.css")" rel="stylesheet" type="text/css" /&gt;
+&lt;script src="@Url.Content("~/Scripts/jquery-1.4.4.min.js")" type="text/javascript"&gt;&lt;/script&gt;
+&lt;script src="@Url.Content("~/Scripts/jquery-ui.min.js")" type="text/javascript"&gt;&lt;/script&gt; 
+</pre></li></ol>
+<h2>Step 4. Try it!</h2>
+<ol>
+<li>That’s it. Start the application and click on the Log On link. Select one of the login methods and you will get redirected to the right page. You will have to login and the provider may ask you to grant permissions to access certain information from your profile. If you click yes you will be logged in and ACS will send you a set of claims like the screen below shows.<br><br><br><a href="http://blogs.southworks.net/mwoloski/files/2011/04/image13.png"><img style="border-bottom: 0px;border-left: 0px;margin: 0px;padding-left: 0px;padding-right: 0px;border-top: 0px;border-right: 0px;padding-top: 0px" border="0" alt="image" src="http://blogs.southworks.net/mwoloski/files/2011/04/image_thumb11.png" width="827" height="693"></a><br><br>
+<table style="color: #000000" border="0" cellspacing="0" cellpadding="2" width="922">
+<tbody>
+<tr>
+<td valign="top" width="506"><a href="http://blogs.southworks.net/mwoloski/files/2011/04/image15.png"><img style="border-bottom: 0px;border-left: 0px;padding-left: 0px;padding-right: 0px;border-top: 0px;border-right: 0px;padding-top: 0px" border="0" alt="image" src="http://blogs.southworks.net/mwoloski/files/2011/04/image_thumb13.png" width="328" height="250"></a></td>
+<td valign="top" width="414"><a href="http://blogs.southworks.net/mwoloski/files/2011/04/image16.png"><img style="border-bottom: 0px;border-left: 0px;padding-left: 0px;padding-right: 0px;border-top: 0px;border-right: 0px;padding-top: 0px" border="0" alt="image" src="http://blogs.southworks.net/mwoloski/files/2011/04/image_thumb14.png" width="328" height="254"></a></td></tr>
+<tr>
+<td valign="top" width="506"><a href="http://blogs.southworks.net/mwoloski/files/2011/04/image17.png"><img style="border-bottom: 0px;border-left: 0px;padding-left: 0px;padding-right: 0px;border-top: 0px;border-right: 0px;padding-top: 0px" border="0" alt="image" src="http://blogs.southworks.net/mwoloski/files/2011/04/image_thumb15.png" width="328" height="254"></a></td>
+<td valign="top" width="416"><a href="http://blogs.southworks.net/mwoloski/files/2011/04/image18.png"><img style="border-bottom: 0px;border-left: 0px;padding-left: 0px;padding-right: 0px;border-top: 0px;border-right: 0px;padding-top: 0px" border="0" alt="image" src="http://blogs.southworks.net/mwoloski/files/2011/04/image_thumb16.png" width="328" height="254"></a></td></tr></tbody></table><br><br><br><a href="http://blogs.southworks.net/mwoloski/files/2011/04/image14.png"><img style="border-bottom: 0px;border-left: 0px;margin: 0px;padding-left: 0px;padding-right: 0px;border-top: 0px;border-right: 0px;padding-top: 0px" border="0" alt="image" src="http://blogs.southworks.net/mwoloski/files/2011/04/image_thumb12.png" width="801" height="619"></a></li></ol>
+<p>I added this line in the HomeController to show all the claims:</p><pre class="brush: csharp;">ViewBag.Message = string.Join("&lt;br/&gt;", ((IClaimsIdentity)this.User.Identity).Claims.Select(c =&gt; c.ClaimType + ": " + c.Value).ToArray());
+</pre>
+<p>Well, it wasn’t 3 steps, but you get the point <img style="border-bottom-style: none;border-left-style: none;border-top-style: none;border-right-style: none" class="wlEmoticon wlEmoticon-winkingsmile" alt="Winking smile" src="http://blogs.southworks.net/mwoloski/files/2011/04/wlEmoticon-winkingsmile.png">. Now, it would be really cool to create a NuGet that will do all this automatically... </p>
+<p>Just for future reference, these are the claims that each identity provider will return by default</p>
+<p><strong>Facebook</strong></p>
+<p>http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier: 619815976<br>http://schemas.microsoft.com/ws/2008/06/identity/claims/expiration: 2011-04-09T21:00:01.0471518Z<br>http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress: <a href="mailto:yourfacebookemail@boo.com">yourfacebookemail@boo.com</a><br>http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name: Matias Woloski<br>http://www.facebook.com/claims/AccessToken: 111617558888963|2.k &lt;stripped&gt; 976|z_fmV&lt;stripped&gt;3kQuo<br>http://schemas.microsoft.com/accesscontrolservice/2010/07/claims/identityprovider: Facebook-&lt;appid&gt; 
+<p><strong>Google</strong> 
+<p>http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier: <a href="https://www.google.com/accounts/o8/id?id=AIt&lt;stripped&gt;UoU">https://www.google.com/accounts/o8/id?id=AIt&lt;stripped&gt;UoU</a><br>http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress: <a href="mailto:yourgooglemail@gmail.com">yourgooglemail@gmail.com</a><br>http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name: Matias Woloski<br>http://schemas.microsoft.com/accesscontrolservice/2010/07/claims/identityprovider: Google 
+<p><strong>LiveID</strong></p>
+<p>http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier: WJoV5kxtlzEbsu&lt;stripped&gt;mMxiMLQ=<br>http://schemas.microsoft.com/accesscontrolservice/2010/07/claims/identityprovider: uri:WindowsLiveID 
+<p><strong>Yahoo</strong> 
+<p>http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier: <a href="https://me.yahoo.com/a/VH6mn5oV&lt;stripped&gt;58mGa#e7b0c">https://me.yahoo.com/a/VH6mn5oV&lt;stripped&gt;58mGa#e7b0c</a><br>http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress: <a href="mailto:youryahoomail@yahoo.com">youryahoomail@yahoo.com</a><br>http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name: Matias Woloski<br>http://schemas.microsoft.com/accesscontrolservice/2010/07/claims/identityprovider: Yahoo! 
+<h2>Following up</h2>
+<p>Get the code used in this post from <a href="https://gist.github.com/911826">here</a>.</p>
+<p>If you are interested in other features of ACS, these are some of the things you can do:</p>
+<ul>
+<li>Read <a href="http://blogs.msdn.com/b/vbertocci/archive/2011/04/11/the-new-acs-ships.aspx">Vittorio’s post</a> announcing ACS and pointing to lot of deliverables coming out today. This has been hard work from <a href="http://twitter.com/nbeni">@nbeni</a>, <a href="http://twitter.com/sebasiaco">@sebasiaco</a>, <a href="http://twitter.com/litodam">@litodam</a> and more <em>southies</em>.
+<li>Go through the ACSv2 labs in the <a href="http://go.microsoft.com/fwlink/?LinkId=148795">Identity Training Kit</a> 
+<li>Follow <a href="http://blogs.msdn.com/b/vbertocci/">Vittorio’s blog</a>, <a href="http://blogs.msdn.com/b/eugeniop/">Eugenio’s blog</a>, <a href="http://blogs.msdn.com/b/justinjsmith/">Justin’s blog</a> and the <a href="http://blogs.msdn.com/b/windowsazureappfabric/">AppFabric team blog</a> 
+<li>Read articles like <a href="http://msdn.microsoft.com/en-us/magazine/gg490345.aspx">this</a> 
+<li>I am collaborating with patterns &amp; practices writing the second part of the Guide to Claims Based Identity and Access Control, including ACS and explaining the scenarios it enable. Stay tune at <a href="http://claimsid.codeplex.com">claimsid.codeplex.com</a> for fresh content.</li></ul>
+<p>DISCLAIMER: use this at your own risk, this code is provided as-is. </p>

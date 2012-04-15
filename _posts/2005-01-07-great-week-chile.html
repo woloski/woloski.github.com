@@ -1,0 +1,35 @@
+--- 
+layout: post
+title: Great week! (Chile)
+published: true
+meta: {}
+
+tags: 
+- Architecture
+- MBI
+- Shadowfax
+type: post
+status: publish
+---
+
+        <P>This week I did an architecture review together with <A href="http://blogs.geekdojo.net/german/">German Marin</A>, from <A href="http://microsoft.com/">Microsoft</A> Consulting Services Chile for an MS partner, <A href="http://www.novared.cl/">Novared</A>, who is willing to implement a large application including <A href="http://microsoft.com/biztalk">Biztalk</A> in the Middleware to conceive a unique customer database. Novared wanted to make the decision whether to use or not <A href="http://workspaces.gotdotnet.com/mbi">MBI 3</A> as the business framework in cooperation with Biztalk.</P>
+<P>Happily, after one week implementing a proof of concept they decided that MBI will be the framework they will use from now on for their applications. Indeed, they realized that using it, will lead to:</P>
+<UL>
+<LI>shorter development time; 
+<LI>better support;  
+<LI>improvement on the development team workload distribution; 
+<LI>enhaced quality on the solution; 
+<LI>opportunity to create a base framework and have isolated development teams that implement the business actions 
+<LI>and some other benefits.</LI></UL>
+<P>The proof of concept included among other things: </P>
+<UL>
+<LI>Single and Batch actions; 
+<LI>Command Pattern &amp; Service Oriented approach;  
+<LI>Request-Response sync communication with Biztalk 2004 orchestations; 
+<LI>Business Event publishing using Output Providers; 
+<LI>use of the MSMQ transport to inject data to Biztalk;  
+<LI>discussion of BAM (Business Activity Monitoring) in conjuction with MBI; 
+<LI>Authorization Manager (AzMan) integration within MBI; 
+<LI>Extensibility and Flexibility of the pipe &amp; filters pattern;    </LI></UL>
+<P>I'm leaving Chile with a lot of ideas spinning on my head. Specially regards <A href="http://workspaces.gotdotnet.com/shadowfx">EDRA</A> / <A href="http://workspaces.gotdotnet.com/mbi">MBI 3</A> / <A href="http://microsoft.com/biztalk">Biztalk Server 2004</A> integration. I splashed the first ideas on under: <A href="http://channel9.msdn.com/wiki/default.aspx/Channel9.EDRABizTalkIntegration">EDRABiztalkIntegration</A></P>
+      

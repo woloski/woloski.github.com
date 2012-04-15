@@ -1,0 +1,62 @@
+--- 
+layout: post
+title: "Scenario: Token Exchange when you can\xE2\x80\x99t change the client"
+published: true
+meta: {}
+
+tags: 
+- Geneva
+- Geneva Server
+- Identity
+type: post
+status: publish
+---
+<p>Couple of months ago Ezequiel <a href="http://blogs.southworks.net/ebella/2009/02/16/federated-identity-concepts-and-patterns/">posted a summary</a> of a <a href="http://msdn.microsoft.com/en-us/library/cc836393.aspx">very interesting article</a> published on the <a href="http://msdn.microsoft.com/en-us/library/cc836389.aspx">Identity issue of the Architecture Journal</a>. This article talked about different patterns on the federated identity world. Last week we had an interesting requirement to solve in a project and this article came to my mind. Specifically one of the scenarios this article points out is when you don’t want the consumer to have knowledge about the relying party STS or you don’t want the client to “see” the token from that STS. The figure below illustrates this scenario. In this diagram, the relying party (service) will receive a token from STS A and will call the STS B to obtain the token.</p>  <p><a href="http://blogs.southworks.net/ebella/2009/02/16/federated-identity-concepts-and-patterns/"><img border="0" src="http://blogs.southworks.net/ebella/files/2009/02/image3.png" /></a></p>  <p>This might be helpful when you can’t change the consumer side of the equation. This lead me to introduce the federated blog engine and how we leveraged this in that project…</p>  <h3>The Federated Blog Engine</h3>  <p>Let’s say we want to implement a blog engine where users can access through federated identity. My blog engine supports the passive profile federation, so when someone access it will get redirected to its IP STS, get authenticated, post the token to the website and voila! We can create new blog posts under our organization identity.</p>  <p>So far nothing new here. Now let’s say that we want to be able to post through Windows Live Writer. This is a rich client that runs on your desktop that you can’t change. On the other side the blog engine will have to expose the MetaWeblog API. Every operation of this API receives the user and password like the code below:</p>  <div id="codeSnippetWrapper">   <pre style="text-align: left;padding-bottom: 0px;margin: 0em;padding-left: 0px;width: 100%;padding-right: 0px;font-family: &#39;Courier New&#39;, courier, monospace;color: black;font-size: 8pt;padding-top: 0px"><span style="color: #0000ff">string</span> NewPost(<span style="color: #0000ff">string</span> blogId, <span style="color: #0000ff">string</span> username, <span style="color: #0000ff">string</span> password, Post post, <span style="color: #0000ff">bool</span> publish);</pre>
+
+  <br /></div>
+
+<p>In this case, the token on the client is a UsernameToken (not the WS-Security one, but think about the analogy). We will send that token (through Https) to the remote MetaWeblog API. </p>
+
+<div id="codeSnippetWrapper">
+  <pre style="text-align: left;padding-bottom: 0px;margin: 0em;padding-left: 0px;width: 100%;padding-right: 0px;font-family: &#39;Courier New&#39;, courier, monospace;color: black;font-size: 8pt;padding-top: 0px">NewPost(<span style="color: #006080">&quot;mwoloski&quot;</span>, <span style="color: #006080">&quot;DOMAIN\matias&quot;</span>, <span style="color: #006080">&quot;mypassword&quot;</span>, post, <span style="color: #0000ff">true</span>)</pre>
+
+  <br /></div>
+
+<p>When the message gets to the service we can intercept it and call the STS that will validate the credentials and will issue a SAML token for the service. The following piece of code shows how to make such request to a Geneva Server Beta 2 using the UserNameMixed endpoint. This endpoint will authenticate the user against AD.</p>
+
+<div style="text-align: left;padding-bottom: 4px;margin: 20px 0px 10px;padding-left: 4px;width: 97.5%;padding-right: 4px;font-family: &#39;Courier New&#39;, courier, monospace;font-size: 8pt;padding-top: 4px" id="codeSnippetWrapper">
+  <pre style="text-align: left;padding-bottom: 0px;margin: 0em;padding-left: 0px;width: 100%;padding-right: 0px;font-family: &#39;Courier New&#39;, courier, monospace;color: black;font-size: 8pt;padding-top: 0px"><span style="color: #0000ff">private</span> <span style="color: #0000ff">static</span> ClaimsIdentityCollection GetToken(<span style="color: #0000ff">string</span> username, <span style="color: #0000ff">string</span> password, Uri stsUrl, X509Certificate2 signatureCertificate, Uri relyingPartyIdentifier, X509Certificate2 decryptingCertificate)<br />{<br />    var binding = <span style="color: #0000ff">new</span> WS2007HttpBinding(SecurityMode.TransportWithMessageCredential, <span style="color: #0000ff">false</span>);<br />    binding.Security.Message.ClientCredentialType = MessageCredentialType.UserName;<br />    binding.Security.Message.EstablishSecurityContext = <span style="color: #0000ff">false</span>;<br /><br />    var credentials = <span style="color: #0000ff">new</span> ClientCredentials();<br />    credentials.UserName.UserName = username;<br />    credentials.UserName.Password = password;<br />    var client = <span style="color: #0000ff">new</span> WSTrustClient(binding, <span style="color: #0000ff">new</span> EndpointAddress(stsUrl), TrustVersion.WSTrust13, credentials);<br /><br />    var request = <span style="color: #0000ff">new</span> RequestSecurityToken();<br />    request.RequestType = <span style="color: #006080">&quot;http://schemas.microsoft.com/idfx/requesttype/issue&quot;</span>;<br />    request.AppliesTo = <span style="color: #0000ff">new</span> EndpointAddress(relyingPartyIdentifier);<br />    var token = client.Issue(request) <span style="color: #0000ff">as</span> GenericXmlSecurityToken;<br /><br />    var claims = token.ToClaimsIdentityCollection(TrustVersion.WSTrust13, signatureCertificate, decryptingCertificate);<br /><br />    <span style="color: #0000ff">return</span> claims;<br />}</pre>
+
+  <br /></div>
+
+<div style="text-align: left;padding-bottom: 4px;margin: 20px 0px 10px;padding-left: 4px;width: 97.5%;padding-right: 4px;font-family: &#39;Courier New&#39;, courier, monospace;font-size: 8pt;padding-top: 4px" id="codeSnippetWrapper">
+  <pre style="text-align: left;padding-bottom: 0px;margin: 0em;padding-left: 0px;width: 100%;padding-right: 0px;font-family: &#39;Courier New&#39;, courier, monospace;color: black;font-size: 8pt;padding-top: 0px">var token = GetToken(<span style="color: #006080">&quot;matias&quot;</span>, <br />        <span style="color: #006080">&quot;password&quot;</span>, <br />        <span style="color: #0000ff">new</span> Uri(<span style="color: #006080">&quot;https://genevaserverurl/Trust/13/UsernameMixed&quot;</span>),<br />        CertificateUtility.GetCertificate(StoreName.TrustedPeople, StoreLocation.LocalMachine, <span style="color: #006080">&quot;CN=Geneva Signing Certificate...&quot;</span>),<br />        <span style="color: #0000ff">new</span> Uri(<span style="color: #006080">&quot;http://hostname/someservice&quot;</span>),<br />        CertificateUtility.GetCertificate(StoreName.My, StoreLocation.LocalMachine, <span style="color: #006080">&quot;CN=hostname&quot;</span>))</pre>
+
+  <br /></div>
+
+<div id="codeSnippetWrapper">&#160;</div>
+
+<div>In the Geneva Server console we configured a new relying party providing the encrypting certificate and the identifier (<a href="http://hostname/someservice">http://hostname/someservice</a>). If you noticed the code above we are sending those parameters so Geneva Server can execute the rules configured for that relying party and the token gets encrypted with the certificate.</div>
+
+<div>&#160;</div>
+
+<div><a href="http://blogs.southworks.net/mwoloski/files/2009/05/image1.png"><img border="0" alt="image" src="http://blogs.southworks.net/mwoloski/files/2009/05/image-thumb1.png" width="644" height="84" /></a> </div>
+
+<div>&#160;</div>
+
+<div>Then we have configured a rule that will output the name, groups and UPN of the user that is being authenticated. Those attributes will be taken from the AD store but if we had a SQL where we stored user attributes or ADLDS</div>
+
+<div>&#160;</div>
+
+<div><a href="http://blogs.southworks.net/mwoloski/files/2009/05/image2.png"><img border="0" alt="image" src="http://blogs.southworks.net/mwoloski/files/2009/05/image-thumb2.png" width="597" height="484" /></a> </div>
+
+<div>&#160;</div>
+
+<div>Finally you can see below a console app that is exercising the code above. Here is what Geneva Server returns. Notice the name, group and upn claims.
+  <br /></div>
+
+<div><a href="http://blogs.southworks.net/mwoloski/files/2009/05/image3.png"><img border="0" alt="image" src="http://blogs.southworks.net/mwoloski/files/2009/05/image-thumb3.png" width="644" height="401" /></a> </div>
+
+<div>&#160;</div>
+
+<div>I posted this and a <a href="http://snipurl.com/activeprofilegeneva">couple of other tests on my SkyDrive</a>.</div>

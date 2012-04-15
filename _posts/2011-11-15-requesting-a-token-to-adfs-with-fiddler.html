@@ -1,0 +1,46 @@
+--- 
+layout: post
+title: Requesting a token to ADFS with Fiddler
+published: false
+meta: 
+  _edit_last: "24"
+  _edit_lock: "1321384204"
+tags: 
+- ADFS
+- Claim-Based Identity
+- Fiddler
+- Identity
+type: post
+status: draft
+---
+<p>Nothing beats the simplicity of HTTP. This week I had a meeting with the customer that had a basic understanding of federated identity with SAML/WS-Federation. He understood the web site scenario where a user would be bounced between the app and the identity provider and the token would be POSTed to the app.</p> <p>Lately they have entered the web service arena. Things start to get more tricky and obscure there. As opposed to the browser scenario (also known as passive), when you want to call a webservice and embed a token as part of the request the client has to take care of everything. Usually this is abstracted away in frameworks like WCF for .NET and Metro for Java. The truth is that they abstract things way too much that the developer does not know what is going on unless you decompile the code of these libraries.</p> <p>Yesterday, I talked with the customer, and used Fiddler to explain things and they got it right away and loved it! Here is a request to get a SAML token from ADFS using WS-Trust 1.3 with a Username and Password token.</p><pre class="brush: xml;">POST /adfs/services/trust/13/usernamemixed HTTP/1.1
+User-Agent: Fiddler
+Host: youradfs
+Content-Type: application/soap+xml; charset=utf-8
+
+
+&lt;s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://www.w3.org/2005/08/addressing"&gt;
+&lt;s:Header&gt;
+&lt;a:Action s:mustUnderstand="1"&gt;http://docs.oasis-open.org/ws-sx/ws-trust/200512/RST/Issue&lt;/a:Action&gt;
+&lt;a:To s:mustUnderstand="1"&gt;https://youradfs/adfs/services/trust/13/usernamemixed&lt;/a:To&gt;
+&lt;o:Security s:mustUnderstand="1" xmlns:o="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd"&gt;
+&lt;o:UsernameToken&gt;
+&lt;o:Username&gt;<strong>youruser</strong>&lt;/o:Username&gt;
+&lt;o:Password&gt;<strong>yourpassword</strong>&lt;/o:Password&gt;
+&lt;/o:UsernameToken&gt;
+&lt;/o:Security&gt;
+&lt;/s:Header&gt;
+&lt;s:Body&gt;
+&lt;trust:RequestSecurityToken xmlns:trust="http://docs.oasis-open.org/ws-sx/ws-trust/200512"&gt;
+&lt;wsp:AppliesTo xmlns:wsp="http://schemas.xmlsoap.org/ws/2004/09/policy"&gt;
+&lt;a:EndpointReference&gt;
+&lt;a:Address&gt;<strong>your:relyingparty:identifier</strong>&lt;/a:Address&gt;
+&lt;/a:EndpointReference&gt;
+&lt;/wsp:AppliesTo&gt;
+&lt;trust:KeyType&gt;http://docs.oasis-open.org/ws-sx/ws-trust/200512/Bearer&lt;/trust:KeyType&gt;
+&lt;trust:RequestType&gt;http://docs.oasis-open.org/ws-sx/ws-trust/200512/Issue&lt;/trust:RequestType&gt;
+&lt;/trust:RequestSecurityToken&gt;
+&lt;/s:Body&gt;
+&lt;/s:Envelope&gt;
+
+</pre>

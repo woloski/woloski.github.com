@@ -1,0 +1,31 @@
+--- 
+layout: post
+title: "Not enough space on the disk \xE2\x80\x93 Windows Azure"
+published: true
+meta: {}
+
+tags: 
+- Azure
+type: post
+status: publish
+---
+<p>No, it’s not because Local Storage quota is low. That’s easy to fix by just increasing the quota in the SerivceDef. I hit this nasty issue while working with WebDeploy, but since you might get this in a different context as well I wanted to share it and get hours back of your life, dear reader <img style="border-bottom-style: none;border-left-style: none;border-top-style: none;border-right-style: none" class="wlEmoticon wlEmoticon-smile" alt="Smile" src="http://blogs.southworks.net/mwoloski/files/2011/08/wlEmoticon-smile.png"> <h2>Problem</h2> <p>WebDeploy throws an out of disk exception when creating a package <p><em>There is not enough space on the disk. at System.IO.__Error.WinIOError(Int32 errorCode, String maybeFullPath) at System.IO.FileStream.WriteCore(Byte[] buffer, Int32 offset, Int32 count) at System.IO.BinaryWriter.Write(Byte[] buffer, Int32 index, Int32 count) at Microsoft.Web.Deployment.ZipEntry.ReadFromFile(String path, Boolean shouldCompress, BinaryWriter tempWriter, Stream stream, FileAttributes attr, DateTime lastModifiedTime, String descriptor, Int64 size) at Microsoft.Web.Deployment.ZipEntry..ctor(String path, DeploymentObject source, ZipFile zipFile)</em> <h2>Analysis</h2> <p>WebDeploy uses a temp path to create temporary files during the package creation. This folder seems to have a 100MB quota according to MSDN, so if the package is more than that, the process will throw an IO exception because the "disk is full" even though there is plenty of space. Below a trace of Process Monitor running from the Azure Web Role showing the CreateFile returning DISK FULL. <p><a href="http://blogs.southworks.net/mwoloski/files/2011/08/image2.png"><img style="border-bottom: 0px;border-left: 0px;padding-left: 0px;padding-right: 0px;border-top: 0px;border-right: 0px;padding-top: 0px" border="0" alt="image" src="http://blogs.southworks.net/mwoloski/files/2011/08/image_thumb2.png" width="1028" height="446"></a><br></p> <p>By looking with Reflector, we can validate that WebDeploy is using Path.GetTempPath. </p> <p><a href="http://blogs.southworks.net/mwoloski/files/2011/08/image1.png"><img style="border-bottom: 0px;border-left: 0px;padding-left: 0px;padding-right: 0px;border-top: 0px;border-right: 0px;padding-top: 0px" border="0" alt="image" src="http://blogs.southworks.net/mwoloski/files/2011/08/image_thumb1.png" width="434" height="357"></a> <h2>Solution</h2> <p>Since we can't change WebDeploy code nor parameterize it to use a different path, the solution is to change the TEMP/TMP environment variables, as suggested here <a href="http://msdn.microsoft.com/en-us/library/gg465400.aspx#Y976">http://msdn.microsoft.com/en-us/library/gg465400.aspx#Y976</a>. An excerpt… <p><strong><font size="4">Ensure That the TEMP/TMP Target Directory Has Sufficient Space</font></strong></p> <p>The standard Windows environment variables TEMP and TMP are available to code running in your application. Both TEMP and TMP point to a single directory that has a maximum size of 100 MB. Any data stored in this directory is not persisted across the lifecycle of the hosted service; if the role instances in a hosted service are recycled, the directory is cleaned. <p>If the temporary directory for the hosted service runs out of space, or if you need data to persist in the temporary directory across the lifecycle of the hosted service, you can implement one of the following alternatives: <li>You can configure a local storage resource, and access it directly instead of using TEMP or TMP. To access a local storage resource from code running within your application, call the <a href="http://msdn.microsoft.com/en-us/library/microsoft.windowsazure.serviceruntime.roleenvironment.getlocalresource.aspx">RoleEnvironment.GetLocalResource</a> method. For more information about setting up local storage resources, see <a href="http://msdn.microsoft.com/en-us/library/ee758708.aspx">How to Configure Local Storage Resources</a>.&nbsp; <li>You can configure a local storage resource, and point the TEMP and TMP directories to point to the path of the local storage resource. This modification should be performed within the <a href="http://msdn.microsoft.com/en-us/library/microsoft.windowsazure.serviceruntime.roleentrypoint.onstart.aspx">RoleEntryPoint.OnStart</a> method.</li> <p>The following code example shows how to modify the target directories for TEMP and TMP from within the OnStart method:<pre>using System;
+using Microsoft.WindowsAzure.ServiceRuntime;
+
+namespace WorkerRole1
+{
+   public class WorkerRole : RoleEntryPoint
+   {
+      public override bool OnStart()
+      {
+         string customTempLocalResourcePath = 
+            RoleEnvironment.GetLocalResource("tempdir").RootPath;
+         Environment.SetEnvironmentVariable("TMP", customTempLocalResourcePath);
+         Environment.SetEnvironmentVariable("TEMP", customTempLocalResourcePath);
+            
+         // The rest of your startup code goes here…
+         
+         return base.OnStart();
+      }
+   }
+}</pre>

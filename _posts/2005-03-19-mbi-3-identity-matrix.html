@@ -1,0 +1,166 @@
+--- 
+layout: post
+title: MBI 3 Identity Matrix
+published: true
+meta: {}
+
+tags: 
+- MBI
+type: post
+status: publish
+---
+
+        <P>How useful is the <A href="http://msdn.microsoft.com/library/default.asp?url=/library/en-us/dnnetsec/html/SecNetAP05.asp">ASP.Net identity matrix</A>? I've queried it a lot...</P>
+<P>I created the same matrix for MBI 3.</P>
+<P>The scenario is a client calling MBI 3 through DispDirect which uses the WebService transport. IIS configurations below apply to the FwkWebServiceTransport virtual directory. The variable means:</P>
+<UL>
+<LI><STRONG>Command</STRONG> = cmd.User.Login 
+<LI><STRONG>Thread</STRONG> = System.Threading.Thread.CurrentPrincipal.Name 
+<LI><STRONG>WindowsIdentity</STRONG> = System.Principal.WindowsIdentity.GetCurrent().Name</LI></UL>
+<P>These variables are queried in an MBI business action.<BR><BR><FONT size="1"><EM>Note</EM>: whenever the Anonymous is checked, it will override any other checkbox (integrated, digest, etc.)<BR><EM>Note 2</EM>: NT AUTHORITY\NETWORK SERVICE is the user that runs the ASP.Net worker process in Windows 2003. For older versions is the MACHINE\ASPNET user.</FONT></P>
+<P>
+<TABLE cellSpacing="0" cellPadding="0" width="536" border="0">
+
+<COL width="184">
+<COL width="117">
+<COL width="235">
+<TBODY>
+<TR>
+<TD class="xl24" width="184" height="18"><STRONG><FONT face="Arial" color="#000000" size="2">IIS anonymous</FONT></STRONG></TD>
+<TD width="117"><STRONG><FONT face="Arial" color="#000000" size="2"></FONT></STRONG></TD>
+<TD width="235"><STRONG><FONT face="Arial" color="#000000" size="2"></FONT></STRONG></TD></TR>
+<TR>
+<TD class="xl36" height="17"><FONT face="Arial" color="#000000" size="2">Principal sent via Dispatcher</FONT></TD>
+<TD class="xl37"><FONT face="Arial" color="#000000" size="2">Variable</FONT></TD>
+<TD class="xl38"><FONT face="Arial" color="#000000" size="2">Identity resutlant</FONT></TD></TR>
+<TR>
+<TD class="xl33" height="17"><FONT face="Arial" color="#000000" size="2">WindowsPrincipal</FONT></TD>
+<TD class="xl34"><FONT face="Arial" color="#000000" size="2">Command</FONT></TD>
+<TD class="xl35"><FONT face="Arial" color="#000000" size="2">""</FONT></TD></TR>
+<TR>
+<TD class="xl25" height="17"><FONT face="Arial" color="#000000" size="2"> </FONT></TD>
+<TD><FONT face="Arial" color="#000000" size="2">Thread</FONT></TD>
+<TD class="xl26"><FONT face="Arial" color="#000000" size="2">""</FONT></TD></TR>
+<TR>
+<TD class="xl30" height="17"><FONT face="Arial" color="#000000" size="2"> </FONT></TD>
+<TD class="xl31"><FONT face="Arial" color="#000000" size="2">WindowsIdentity</FONT></TD>
+<TD class="xl32"><FONT face="Arial" color="#000000" size="2">NT AUTHORITY\NETWORK SERVICE</FONT></TD></TR>
+<TR>
+<TD class="xl33" height="17"><FONT face="Arial" color="#000000" size="2">GenericPrincipal</FONT></TD>
+<TD class="xl34"><FONT face="Arial" color="#000000" size="2">Command</FONT></TD>
+<TD class="xl35"><FONT face="Arial" color="#000000" size="2">User provided in GenericIdentity</FONT></TD></TR>
+<TR>
+<TD class="xl25" height="17"><FONT face="Arial" color="#000000" size="2"> </FONT></TD>
+<TD><FONT face="Arial" color="#000000" size="2">Thread</FONT></TD>
+<TD class="xl26"><FONT face="Arial" color="#000000" size="2">User provided in GenericIdentity</FONT></TD></TR>
+<TR>
+<TD class="xl30" height="17"><FONT face="Arial" color="#000000" size="2"> </FONT></TD>
+<TD class="xl31"><FONT face="Arial" color="#000000" size="2">WindowsIdentity</FONT></TD>
+<TD class="xl32"><FONT face="Arial" color="#000000" size="2">NT AUTHORITY\NETWORK SERVICE</FONT></TD></TR>
+<TR>
+<TD class="xl25" height="17"><FONT face="Arial" color="#000000" size="2">Nothing</FONT></TD>
+<TD><FONT face="Arial" color="#000000" size="2">Command</FONT></TD>
+<TD class="xl26"><FONT face="Arial" color="#000000" size="2">""</FONT></TD></TR>
+<TR>
+<TD class="xl25" height="17"><FONT face="Arial" color="#000000" size="2"> </FONT></TD>
+<TD><FONT face="Arial" color="#000000" size="2">Thread</FONT></TD>
+<TD class="xl26"><FONT face="Arial" color="#000000" size="2">""</FONT></TD></TR>
+<TR>
+<TD class="xl27" height="18"><FONT face="Arial" color="#000000" size="2"> </FONT></TD>
+<TD class="xl28"><FONT face="Arial" color="#000000" size="2">WindowsIdentity</FONT></TD>
+<TD class="xl29"><FONT face="Arial" color="#000000" size="2">NT AUTHORITY\NETWORK SERVICE</FONT></TD></TR>
+<TR>
+<TD height="17"><FONT face="Arial" color="#000000" size="2"></FONT></TD>
+<TD><FONT face="Arial" color="#000000" size="2"></FONT></TD>
+<TD><FONT face="Arial" color="#000000" size="2"></FONT></TD></TR>
+<TR>
+<TD class="xl24" height="18"><STRONG><FONT face="Arial" color="#000000" size="2">IIS integrated windows</FONT></STRONG></TD>
+<TD><STRONG><FONT face="Arial" color="#000000" size="2"></FONT></STRONG></TD>
+<TD><STRONG><FONT face="Arial" color="#000000" size="2"></FONT></STRONG></TD></TR>
+<TR>
+<TD class="xl36" height="17"><FONT face="Arial" color="#000000" size="2">Principal sent via Dispatcher</FONT></TD>
+<TD class="xl37"><FONT face="Arial" color="#000000" size="2">Variable</FONT></TD>
+<TD class="xl38"><FONT face="Arial" color="#000000" size="2">Identity resutlant</FONT></TD></TR>
+<TR>
+<TD class="xl25" height="17"><FONT face="Arial" color="#000000" size="2">WindowsPrincipal</FONT></TD>
+<TD><FONT face="Arial" color="#000000" size="2">Command</FONT></TD>
+<TD class="xl26"><FONT face="Arial" color="#000000" size="2">Domain\UserName</FONT></TD></TR>
+<TR>
+<TD class="xl25" height="17"><FONT face="Arial" color="#000000" size="2"> </FONT></TD>
+<TD><FONT face="Arial" color="#000000" size="2">Thread</FONT></TD>
+<TD class="xl26"><FONT face="Arial" color="#000000" size="2">Domain\UserName</FONT></TD></TR>
+<TR>
+<TD class="xl30" height="17"><FONT face="Arial" color="#000000" size="2"> </FONT></TD>
+<TD class="xl31"><FONT face="Arial" color="#000000" size="2">WindowsIdentity</FONT></TD>
+<TD class="xl32"><FONT face="Arial" color="#000000" size="2">NT AUTHORITY\NETWORK SERVICE</FONT></TD></TR>
+<TR>
+<TD class="xl33" height="17"><FONT face="Arial" color="#000000" size="2">GenericPrincipal</FONT></TD>
+<TD class="xl34"><FONT face="Arial" color="#000000" size="2">Command</FONT></TD>
+<TD class="xl35"><FONT face="Arial" color="#000000" size="2">User provided in GenericIdentity</FONT></TD></TR>
+<TR>
+<TD class="xl25" height="17"><FONT face="Arial" color="#000000" size="2"> </FONT></TD>
+<TD><FONT face="Arial" color="#000000" size="2">Thread</FONT></TD>
+<TD class="xl26"><FONT face="Arial" color="#000000" size="2">User provided in GenericIdentity</FONT></TD></TR>
+<TR>
+<TD class="xl30" height="17"><FONT face="Arial" color="#000000" size="2"> </FONT></TD>
+<TD class="xl31"><FONT face="Arial" color="#000000" size="2">WindowsIdentity</FONT></TD>
+<TD class="xl32"><FONT face="Arial" color="#000000" size="2">NT AUTHORITY\NETWORK SERVICE</FONT></TD></TR>
+<TR>
+<TD class="xl25" height="17"><FONT face="Arial" color="#000000" size="2">Nothing</FONT></TD>
+<TD><FONT face="Arial" color="#000000" size="2">Command</FONT></TD>
+<TD class="xl26"><FONT face="Arial" color="#000000" size="2">""</FONT></TD></TR>
+<TR>
+<TD class="xl25" height="17"><FONT face="Arial" color="#000000" size="2"> </FONT></TD>
+<TD><FONT face="Arial" color="#000000" size="2">Thread</FONT></TD>
+<TD class="xl26"><FONT face="Arial" color="#000000" size="2">""</FONT></TD></TR>
+<TR>
+<TD class="xl27" height="18"><FONT face="Arial" color="#000000" size="2"> </FONT></TD>
+<TD class="xl28"><FONT face="Arial" color="#000000" size="2">WindowsIdentity</FONT></TD>
+<TD class="xl29"><FONT face="Arial" color="#000000" size="2">NT AUTHORITY\NETWORK SERVICE</FONT></TD></TR>
+<TR>
+<TD height="17"><FONT face="Arial" color="#000000" size="2"></FONT></TD>
+<TD><FONT face="Arial" color="#000000" size="2"></FONT></TD>
+<TD><FONT face="Arial" color="#000000" size="2"></FONT></TD></TR>
+<TR>
+<TD class="xl24" colSpan="3" height="18"><STRONG><FONT face="Arial" color="#000000" size="2">IIS integrated and web.config with </FONT></STRONG></TD></TR>
+<TR>
+<TD class="xl36" height="17"><FONT face="Arial" color="#000000" size="2">Principal sent via Dispatcher</FONT></TD>
+<TD class="xl37"><FONT face="Arial" color="#000000" size="2">Variable</FONT></TD>
+<TD class="xl38"><FONT face="Arial" color="#000000" size="2">Identity resutlant</FONT></TD></TR>
+<TR>
+<TD class="xl25" height="17"><FONT face="Arial" color="#000000" size="2">WindowsPrincipal</FONT></TD>
+<TD><FONT face="Arial" color="#000000" size="2">Command</FONT></TD>
+<TD class="xl26"><FONT face="Arial" color="#000000" size="2">Domain\UserName</FONT></TD></TR>
+<TR>
+<TD class="xl25" height="17"><FONT face="Arial" color="#000000" size="2"> </FONT></TD>
+<TD><FONT face="Arial" color="#000000" size="2">Thread</FONT></TD>
+<TD class="xl26"><FONT face="Arial" color="#000000" size="2">Domain\UserName</FONT></TD></TR>
+<TR>
+<TD class="xl30" height="17"><FONT face="Arial" color="#000000" size="2"> </FONT></TD>
+<TD class="xl31"><FONT face="Arial" color="#000000" size="2">WindowsIdentity</FONT></TD>
+<TD class="xl32"><FONT face="Arial" color="#000000" size="2">Domain\UserName</FONT></TD></TR>
+<TR>
+<TD class="xl33" height="17"><FONT face="Arial" color="#000000" size="2">GenericPrincipal</FONT></TD>
+<TD class="xl34"><FONT face="Arial" color="#000000" size="2">Command</FONT></TD>
+<TD class="xl35"><FONT face="Arial" color="#000000" size="2">User provided in GenericIdentity</FONT></TD></TR>
+<TR>
+<TD class="xl25" height="17"><FONT face="Arial" color="#000000" size="2"> </FONT></TD>
+<TD><FONT face="Arial" color="#000000" size="2">Thread</FONT></TD>
+<TD class="xl26"><FONT face="Arial" color="#000000" size="2">User provided in GenericIdentity</FONT></TD></TR>
+<TR>
+<TD class="xl30" height="17"><FONT face="Arial" color="#000000" size="2"> </FONT></TD>
+<TD class="xl31"><FONT face="Arial" color="#000000" size="2">WindowsIdentity</FONT></TD>
+<TD class="xl32"><FONT face="Arial" color="#000000" size="2">Domain\UserName</FONT></TD></TR>
+<TR>
+<TD class="xl25" height="17"><FONT face="Arial" color="#000000" size="2">Nothing</FONT></TD>
+<TD><FONT face="Arial" color="#000000" size="2">Command</FONT></TD>
+<TD class="xl26"><FONT face="Arial" color="#000000" size="2">""</FONT></TD></TR>
+<TR>
+<TD class="xl25" height="17"><FONT face="Arial" color="#000000" size="2"> </FONT></TD>
+<TD><FONT face="Arial" color="#000000" size="2">Thread</FONT></TD>
+<TD class="xl26"><FONT face="Arial" color="#000000" size="2">""</FONT></TD></TR>
+<TR>
+<TD class="xl27" height="18"><FONT face="Arial" color="#000000" size="2"> </FONT></TD>
+<TD class="xl28"><FONT face="Arial" color="#000000" size="2">WindowsIdentity</FONT></TD>
+<TD class="xl29"><FONT face="Arial" color="#000000" size="2">Domain\UserName</FONT></TD></TR></TBODY></TABLE></P>
+      

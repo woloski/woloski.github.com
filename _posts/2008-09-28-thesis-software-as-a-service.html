@@ -1,0 +1,53 @@
+--- 
+layout: post
+title: Thesis - Software as a Service
+published: true
+meta: 
+  _edit_last: "24"
+  _edit_lock: "1222769160"
+  enclosure: |-
+    http://www.microsoft.com/feeds/msdn/en-us/architecture/media/SaaS/NWH-DEMO-1-800-600.asx
+    412
+    video/x-ms-asf
+tags: 
+- Cloud Computing
+- SaaS
+type: post
+status: publish
+---
+<img style="margin: 0px 0px 0px 20px" src="http://blogs.southworks.net/mwoloski/files/2008/09/image1.png" border="0" alt="cloud computing" width="260" height="178" align="right" />
+
+My interest in Software as a Service (SaaS) born during a trip to Microsoft in 2006. Looking for an interesting topic to elaborate on my graduate thesis, I started digging on different areas and asking different colleagues and friends. Initially, influenced by the work of <a href="http://www.thearchitectexchange.com/asehmi/">Arvindra Sehmi</a>, I got interested in agent programming (<a href="http://en.wikipedia.org/wiki/BDI_software_agent">BDI agents</a>, <a href="http://en.wikipedia.org/wiki/Multi-agent_system">multi-agents systems</a>, etc). Later, <a href="http://blogs.msdn.com/eugeniop">Eugenio Pace</a>, a mentor and friend, commented me about an emerging model of software distribution. After a couple of months, Alejandro Jack (mentor and friend also), contacted me with <a href="http://blogs.msdn.com/jdevados/">John DeVadoos</a> (former director of the <a href="http://msdn.microsoft.com/architecture">Architecture Strategy Team</a> at Microsoft, now leading the <a href="http://msdn.microsoft.com/practices">patterns &amp; practices</a> team). This group was formed by <a href="http://blogs.msdn.com/gianpolo">Gianpaolo Carraro</a> and <a href="http://blogs.msdn.com/fred_chong">Fred Chong</a> initially and last year Eugenio joined them and Fred left. Their daily job consists of researching the Software as a Service model from the architectural point of view. As part of this challenge, the group establishes relationships with clients interested in the model and with product teams looking for feedback to shorten the gap <a href="http://blogs.southworks.net/mwoloski/files/2008/09/redmond-northwind-hosting-042.jpg"><img style="margin: 10px 0px 5px 10px" src="http://blogs.southworks.net/mwoloski/files/2008/09/redmond-northwind-hosting-042-thumb.jpg" border="0" alt="Redmond Northwind Hosting 042" width="260" height="200" align="right" /></a>on the platform. The group also publishes a number of <a href="http://msdn.microsoft.com/en-us/architecture/aa699384.aspx">papers</a> and <a href="http://www.codeplex.com/LitwareHr">proof of concepts</a> using Microsoft technologies. I did a good connection with them and finally decided to pick Software as a Service as the topic for my thesis.
+
+Throughout the last two years I've been collaborating with this group writing proof of concepts, preparing and delivering workshops. On the right, it's me working with Eugenio (on the left) at building 20 one year ago (Gianpaolo is taking the picture). The post-its on the wall are the user stories for <a href="http://www.microsoft.com/feeds/msdn/en-us/architecture/media/SaaS/NWH-DEMO-1-800-600.asx">Northwind Hosting</a> (I was happy to see <a href="http://code.google.com/appengine/">Google App Engine</a> six months later as a validation of our thinking).
+
+I've witnessed the growth of Software as a Service since it was in the initial stages up to now that has started being adopted by the industry and lately has been extended to a broader term: <strong>Cloud Computing.</strong>
+
+The thesis is the sum of all the experience I gather along these years and it's an attempt to summarize and compress the taxonomy of Software as a Service applications on a single model; that is more about "breadth" than "depth". This model was based on <em>Feature Modeling, </em>a technique used in <em>Software Product Lines (SPL).</em> <em>Feature Modeling</em> is a method and notation to elicit and represent common and variable features of the system in a system family. It was first proposed by Kang et al in <a href="http://www.sei.cmu.edu/domain-engineering/FODA.html"><em>Feature Oriented Domain Analysis</em></a> by the Software Engineering Institute (SEI, 90). It's been used lately in <a href="http://www.swen.uwaterloo.ca/~kczarnec/gsdoverview.pdf">Generative Software Development</a> (Czarnecki, 2005), which aims at modeling and implementing system families in such a way that a given system can be automatically generated from specification written in one or more textual or graphical domain specific languages (DSLs). Since SaaS and Cloud Computing are evolving fast I wanted to separate the problem space from the solution space allowing the individual development and growth of each of them. <em>Feature Modeling </em>helped because it was focused on the capabilities. I didn't try to use <em>Feature Modeling </em>to automate the generation of this kind of systems, though. The priority was having a model that allow me to frame and explain Software as a Service systems.
+
+ 
+<p align="center"><a href="http://blogs.southworks.net/mwoloski/files/2008/09/image2.png"><img src="http://blogs.southworks.net/mwoloski/files/2008/09/image-thumb1.png" border="0" alt="image" width="400" height="175" /></a></p>
+<p align="center"><em>Separation between problem and solution space (Overview of Generative Software Development, Czarnecki)</em></p>
+<p align="left">Part of defining the problem space consisted of doing a <em>domain analysis. </em>This is an activity of SPL aiming to characterize a domain by understanding their commonality and variability. If you follow this blog you might have read the <a href="http://blogs.southworks.net/mwoloski/2008/08/19/cloud-computing-taxonomy-map/">cloud computing taxonomy map post</a>. That was an exercise during the domain analysis that helped me understand the different scopes, offerings and features of Software as a Service.</p>
+<p align="left"><a href="http://blogs.southworks.net/mwoloski/files/2008/09/image3.png"><img src="http://blogs.southworks.net/mwoloski/files/2008/09/image-thumb2.png" border="0" alt="image" width="720" height="307" /></a></p>
+<p align="center"><em>Domain analysis of Software as a Service</em></p>
+<p align="left">With this information, I've spent a couple of days pasting post-its on the wall, trying to group the features and capabilities in a way that makes sense. The end result was this "onion" diagram where each category holds the different features of Software as a Service.</p>
+<p align="center"><a href="http://blogs.southworks.net/mwoloski/files/2008/09/image4.png"><img src="http://blogs.southworks.net/mwoloski/files/2008/09/image-thumb3.png" border="0" alt="image" width="460" height="278" /></a></p>
+<p align="left">The model is later refined, from the taxonomy above to the capability layer (problem space) and finally to the implementation layer (solution space) as shown in the following figure.</p>
+<p align="center"><a href="http://blogs.southworks.net/mwoloski/files/2008/09/image5.png"><img src="http://blogs.southworks.net/mwoloski/files/2008/09/image-thumb4.png" border="0" alt="image" width="350" height="329" /></a></p>
+The thesis then describes each of the capabilities in a high level fashion and then proposes patterns, architecture styles and technologies to implement those capabilities.
+
+The following feature tree is an instance of the capability layer of the model for the <a href="http://www.codeplex.com/LitwareHr">LitwareHr</a> application (grayed capabilities are not part of LitwareHr system). This content is in Spanish, but it will be soon available in English.
+
+<a href="http://blogs.southworks.net/mwoloski/files/2008/09/image6.png"><img src="http://blogs.southworks.net/mwoloski/files/2008/09/image-thumb5.png" border="0" alt="image" width="720" height="559" /></a> 
+
+The thesis also includes other non technical aspects like
+<ul>
+	<li>Adoption and diffusion analysis of SaaS based on market research</li>
+	<li>Barriers for adoption</li>
+	<li>Historical context (starting from specialization in the 19th century, passing through outsourcing, mainframes and what not :)</li>
+	<li>Roles and ecosystem</li>
+</ul>
+I want to thanks again to all the people that helped directly or indirectly: my family and fiancee, Alejandro Jack, Gustavo López, Eugenio Pace, Gianpaolo Carraro, Fred Chong, Arvindra Sehmi, Ariel Schapiro, Angel "Java" Lopez and to all Southworks.
+
+Fell free to <a href="http://snipurl.com/3xbuj">download the Spanish version</a> and let me know if you find it useful to matias at southworks dot net.

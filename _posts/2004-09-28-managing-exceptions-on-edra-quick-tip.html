@@ -1,0 +1,19 @@
+--- 
+layout: post
+title: Managing exceptions on EDRA - quick tip
+published: true
+meta: {}
+
+tags: 
+- Shadowfax
+type: post
+status: publish
+---
+
+        <P>The exceptions thrown by business actions in EDRA are caught by the corresponding adapters (either a generic Exception or a BusinessRuleException). In the case of the WebServiceInterfaceAdapter, it will catch BusinessRuleException's and Exception's and will generate a SoapException and with the exception information in its details node.</P>
+<P>This way the client will always see a SoapException (in the case of webservices) or an ApplicationException (in the case of remoting).</P>
+<P>The idea is to get the SoapException on the client and make use of it.<BR></P>
+<P>This piece of code will clarify it.</P>
+<P><SPAN><SPAN>try</SPAN> {<BR><SPAN>    // call EDRA service</SPAN><BR>}<BR><SPAN>catch</SPAN> ( SoapException se ) {<BR><SPAN>    if</SPAN> ( se.Code == SoapException.ClientFaultCode ) {<BR><SPAN>         // this is a BusinessRuleException. Show it to the client</SPAN><BR>         lblBizRuleBroken.Text <SPAN>=</SPAN> GetDetails( se.Detail );<BR>    } <SPAN>else</SPAN> {<BR><SPAN>         // this is an Exception, a server fault, user normally don't want to see it</SPAN><BR><SPAN>         // Show a generic message and the reference code. The reference code is in the Detail XmlNode of the se</SPAN><BR>    }<BR>}</SPAN><SPAN><BR></P></SPAN>
+<P> </P>
+      

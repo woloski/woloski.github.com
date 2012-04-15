@@ -1,0 +1,21 @@
+--- 
+layout: post
+title: Reuse usercontrols, masterpages, etc in ASP.Net 2
+published: true
+meta: {}
+
+tags: 
+- ASP.Net
+type: post
+status: publish
+---
+
+        How many times you wanted to reuse asp.net artifacts like usercontrols, or even pages? <a href="http://weblogs.asp.net/dwahlin/">Dan Wahlin</a> posted to the <a href="http://aspadvice.com">aspadvice.com</a> list regards this issue. He wanted to reuse a master page accross different websites (hosted on different vdirs).<br>
+I've recommended him reading <a href="http://weblogs.asp.net/scottgu/archive/2005/08/28/423888.aspx">this post</a> from <a href="http://weblogs.asp.net/scottgu/">ScottGu</a>
+and he got working a first version. The idea is to sign and publish the
+website and put it on the GAC. Then on the website that you want to reuse create an empty
+masterpage and make it inherits from the GAC masterpage class. The
+entire post can be <a href="http://weblogs.asp.net/dwahlin/archive/2005/11/16/430779.aspx">read here</a>.<br>
+<br>
+
+      

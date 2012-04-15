@@ -1,0 +1,123 @@
+--- 
+layout: post
+title: "How To: decrypt a GenericXmlSecurityToken with Geneva Beta 2"
+published: true
+meta: {}
+
+tags: 
+- Geneva
+- Identity
+type: post
+status: publish
+---
+<p>This post had a lot of visits so I have updated it to work with Geneva Beta 2</p>  <div id="codeSnippetWrapper">   <div style="text-align: left;padding-bottom: 0px;padding-left: 0px;width: 100%;padding-right: 0px;font-family: &#39;Courier New&#39;, courier, monospace;color: black;font-size: 8pt;padding-top: 0px" id="codeSnippet">     <pre style="text-align: left;padding-bottom: 0px;margin: 0em;padding-left: 0px;width: 100%;padding-right: 0px;font-family: &#39;Courier New&#39;, courier, monospace;color: black;font-size: 8pt;padding-top: 0px"><span style="color: #606060">   1:</span> <span style="color: #0000ff">public</span> <span style="color: #0000ff">static</span> ClaimsIdentityCollection ToClaimsIdentityCollection(<span style="color: #0000ff">this</span> GenericXmlSecurityToken originalToken, TrustVersion trustVersion, X509Certificate2 signature, X509Certificate2 encryption)</pre>
+<!--CRLF-->
+
+    <pre style="text-align: left;padding-bottom: 0px;margin: 0em;padding-left: 0px;width: 100%;padding-right: 0px;font-family: &#39;Courier New&#39;, courier, monospace;color: black;font-size: 8pt;padding-top: 0px"><span style="color: #606060">   2:</span> {</pre>
+<!--CRLF-->
+
+    <pre style="text-align: left;padding-bottom: 0px;margin: 0em;padding-left: 0px;width: 100%;padding-right: 0px;font-family: &#39;Courier New&#39;, courier, monospace;color: black;font-size: 8pt;padding-top: 0px"><span style="color: #606060">   3:</span>     var tokenReader = <span style="color: #0000ff">new</span> StringReader(originalToken.TokenXml.OuterXml);</pre>
+<!--CRLF-->
+
+    <pre style="text-align: left;padding-bottom: 0px;margin: 0em;padding-left: 0px;width: 100%;padding-right: 0px;font-family: &#39;Courier New&#39;, courier, monospace;color: black;font-size: 8pt;padding-top: 0px"><span style="color: #606060">   4:</span>     var reader = XmlReader.Create(tokenReader);</pre>
+<!--CRLF-->
+
+    <pre style="text-align: left;padding-bottom: 0px;margin: 0em;padding-left: 0px;width: 100%;padding-right: 0px;font-family: &#39;Courier New&#39;, courier, monospace;color: black;font-size: 8pt;padding-top: 0px"><span style="color: #606060">   5:</span>&#160; </pre>
+<!--CRLF-->
+
+    <pre style="text-align: left;padding-bottom: 0px;margin: 0em;padding-left: 0px;width: 100%;padding-right: 0px;font-family: &#39;Courier New&#39;, courier, monospace;color: black;font-size: 8pt;padding-top: 0px"><span style="color: #606060">   6:</span>     var privateKeyToken = <span style="color: #0000ff">new</span> X509SecurityToken(encryption);</pre>
+<!--CRLF-->
+
+    <pre style="text-align: left;padding-bottom: 0px;margin: 0em;padding-left: 0px;width: 100%;padding-right: 0px;font-family: &#39;Courier New&#39;, courier, monospace;color: black;font-size: 8pt;padding-top: 0px"><span style="color: #606060">   7:</span>     var issuerKeyToken = <span style="color: #0000ff">new</span> X509SecurityToken(signature);</pre>
+<!--CRLF-->
+
+    <pre style="text-align: left;padding-bottom: 0px;margin: 0em;padding-left: 0px;width: 100%;padding-right: 0px;font-family: &#39;Courier New&#39;, courier, monospace;color: black;font-size: 8pt;padding-top: 0px"><span style="color: #606060">   8:</span>     var tokens = <span style="color: #0000ff">new</span> List&lt;SecurityToken&gt;();</pre>
+<!--CRLF-->
+
+    <pre style="text-align: left;padding-bottom: 0px;margin: 0em;padding-left: 0px;width: 100%;padding-right: 0px;font-family: &#39;Courier New&#39;, courier, monospace;color: black;font-size: 8pt;padding-top: 0px"><span style="color: #606060">   9:</span>     tokens.Add(privateKeyToken);</pre>
+<!--CRLF-->
+
+    <pre style="text-align: left;padding-bottom: 0px;margin: 0em;padding-left: 0px;width: 100%;padding-right: 0px;font-family: &#39;Courier New&#39;, courier, monospace;color: black;font-size: 8pt;padding-top: 0px"><span style="color: #606060">  10:</span>     tokens.Add(issuerKeyToken);</pre>
+<!--CRLF-->
+
+    <pre style="text-align: left;padding-bottom: 0px;margin: 0em;padding-left: 0px;width: 100%;padding-right: 0px;font-family: &#39;Courier New&#39;, courier, monospace;color: black;font-size: 8pt;padding-top: 0px"><span style="color: #606060">  11:</span>     SecurityTokenResolver outOfBandTokenResolver = SecurityTokenResolver.CreateDefaultSecurityTokenResolver(<span style="color: #0000ff">new</span> ReadOnlyCollection&lt;SecurityToken&gt;(tokens), <span style="color: #0000ff">false</span>);</pre>
+<!--CRLF-->
+
+    <pre style="text-align: left;padding-bottom: 0px;margin: 0em;padding-left: 0px;width: 100%;padding-right: 0px;font-family: &#39;Courier New&#39;, courier, monospace;color: black;font-size: 8pt;padding-top: 0px"><span style="color: #606060">  12:</span>&#160; </pre>
+<!--CRLF-->
+
+    <pre style="text-align: left;padding-bottom: 0px;margin: 0em;padding-left: 0px;width: 100%;padding-right: 0px;font-family: &#39;Courier New&#39;, courier, monospace;color: black;font-size: 8pt;padding-top: 0px"><span style="color: #606060">  13:</span>     var handlers = SecurityTokenHandlerCollection.CreateDefaultSecurityTokenHandlerCollection();</pre>
+<!--CRLF-->
+
+    <pre style="text-align: left;padding-bottom: 0px;margin: 0em;padding-left: 0px;width: 100%;padding-right: 0px;font-family: &#39;Courier New&#39;, courier, monospace;color: black;font-size: 8pt;padding-top: 0px"><span style="color: #606060">  14:</span>     var samlHandler = handlers[<span style="color: #0000ff">typeof</span>(SamlSecurityToken)] <span style="color: #0000ff">as</span> Saml11SecurityTokenHandler;</pre>
+<!--CRLF-->
+
+    <pre style="text-align: left;padding-bottom: 0px;margin: 0em;padding-left: 0px;width: 100%;padding-right: 0px;font-family: &#39;Courier New&#39;, courier, monospace;color: black;font-size: 8pt;padding-top: 0px"><span style="color: #606060">  15:</span>     samlHandler.ContainingCollection[<span style="color: #0000ff">typeof</span>(EncryptedSecurityToken)].Configuration.ServiceTokenResolver = outOfBandTokenResolver;</pre>
+<!--CRLF-->
+
+    <pre style="text-align: left;padding-bottom: 0px;margin: 0em;padding-left: 0px;width: 100%;padding-right: 0px;font-family: &#39;Courier New&#39;, courier, monospace;color: black;font-size: 8pt;padding-top: 0px"><span style="color: #606060">  16:</span>     var issuerRegistry = <span style="color: #0000ff">new</span> ConfigurationBasedIssuerNameRegistry();</pre>
+<!--CRLF-->
+
+    <pre style="text-align: left;padding-bottom: 0px;margin: 0em;padding-left: 0px;width: 100%;padding-right: 0px;font-family: &#39;Courier New&#39;, courier, monospace;color: black;font-size: 8pt;padding-top: 0px"><span style="color: #606060">  17:</span>     issuerRegistry.AddTrustedIssuer(signature.Thumbprint, signature.Subject);</pre>
+<!--CRLF-->
+
+    <pre style="text-align: left;padding-bottom: 0px;margin: 0em;padding-left: 0px;width: 100%;padding-right: 0px;font-family: &#39;Courier New&#39;, courier, monospace;color: black;font-size: 8pt;padding-top: 0px"><span style="color: #606060">  18:</span>     samlHandler.Configuration.IssuerNameRegistry = issuerRegistry;</pre>
+<!--CRLF-->
+
+    <pre style="text-align: left;padding-bottom: 0px;margin: 0em;padding-left: 0px;width: 100%;padding-right: 0px;font-family: &#39;Courier New&#39;, courier, monospace;color: black;font-size: 8pt;padding-top: 0px"><span style="color: #606060">  19:</span>&#160; </pre>
+<!--CRLF-->
+
+    <pre style="text-align: left;padding-bottom: 0px;margin: 0em;padding-left: 0px;width: 100%;padding-right: 0px;font-family: &#39;Courier New&#39;, courier, monospace;color: black;font-size: 8pt;padding-top: 0px"><span style="color: #606060">  20:</span>     var serializer = <span style="color: #0000ff">new</span> SecurityTokenSerializerAdapter(handlers,</pre>
+<!--CRLF-->
+
+    <pre style="text-align: left;padding-bottom: 0px;margin: 0em;padding-left: 0px;width: 100%;padding-right: 0px;font-family: &#39;Courier New&#39;, courier, monospace;color: black;font-size: 8pt;padding-top: 0px"><span style="color: #606060">  21:</span>         SecurityVersion.WSSecurity11,</pre>
+<!--CRLF-->
+
+    <pre style="text-align: left;padding-bottom: 0px;margin: 0em;padding-left: 0px;width: 100%;padding-right: 0px;font-family: &#39;Courier New&#39;, courier, monospace;color: black;font-size: 8pt;padding-top: 0px"><span style="color: #606060">  22:</span>         trustVersion,</pre>
+<!--CRLF-->
+
+    <pre style="text-align: left;padding-bottom: 0px;margin: 0em;padding-left: 0px;width: 100%;padding-right: 0px;font-family: &#39;Courier New&#39;, courier, monospace;color: black;font-size: 8pt;padding-top: 0px"><span style="color: #606060">  23:</span>         trustVersion == TrustVersion.WSTrust13 ? SecureConversationVersion.WSSecureConversation13 : SecureConversationVersion.WSSecureConversationFeb2005,</pre>
+<!--CRLF-->
+
+    <pre style="text-align: left;padding-bottom: 0px;margin: 0em;padding-left: 0px;width: 100%;padding-right: 0px;font-family: &#39;Courier New&#39;, courier, monospace;color: black;font-size: 8pt;padding-top: 0px"><span style="color: #606060">  24:</span>         <span style="color: #0000ff">false</span>,</pre>
+<!--CRLF-->
+
+    <pre style="text-align: left;padding-bottom: 0px;margin: 0em;padding-left: 0px;width: 100%;padding-right: 0px;font-family: &#39;Courier New&#39;, courier, monospace;color: black;font-size: 8pt;padding-top: 0px"><span style="color: #606060">  25:</span>         <span style="color: #0000ff">null</span>,</pre>
+<!--CRLF-->
+
+    <pre style="text-align: left;padding-bottom: 0px;margin: 0em;padding-left: 0px;width: 100%;padding-right: 0px;font-family: &#39;Courier New&#39;, courier, monospace;color: black;font-size: 8pt;padding-top: 0px"><span style="color: #606060">  26:</span>         <span style="color: #0000ff">null</span>,</pre>
+<!--CRLF-->
+
+    <pre style="text-align: left;padding-bottom: 0px;margin: 0em;padding-left: 0px;width: 100%;padding-right: 0px;font-family: &#39;Courier New&#39;, courier, monospace;color: black;font-size: 8pt;padding-top: 0px"><span style="color: #606060">  27:</span>         <span style="color: #0000ff">null</span>);</pre>
+<!--CRLF-->
+
+    <pre style="text-align: left;padding-bottom: 0px;margin: 0em;padding-left: 0px;width: 100%;padding-right: 0px;font-family: &#39;Courier New&#39;, courier, monospace;color: black;font-size: 8pt;padding-top: 0px"><span style="color: #606060">  28:</span>&#160; </pre>
+<!--CRLF-->
+
+    <pre style="text-align: left;padding-bottom: 0px;margin: 0em;padding-left: 0px;width: 100%;padding-right: 0px;font-family: &#39;Courier New&#39;, courier, monospace;color: black;font-size: 8pt;padding-top: 0px"><span style="color: #606060">  29:</span>     var samlSecurityToken = serializer.ReadToken(reader, outOfBandTokenResolver);</pre>
+<!--CRLF-->
+
+    <pre style="text-align: left;padding-bottom: 0px;margin: 0em;padding-left: 0px;width: 100%;padding-right: 0px;font-family: &#39;Courier New&#39;, courier, monospace;color: black;font-size: 8pt;padding-top: 0px"><span style="color: #606060">  30:</span>     reader.Close();</pre>
+<!--CRLF-->
+
+    <pre style="text-align: left;padding-bottom: 0px;margin: 0em;padding-left: 0px;width: 100%;padding-right: 0px;font-family: &#39;Courier New&#39;, courier, monospace;color: black;font-size: 8pt;padding-top: 0px"><span style="color: #606060">  31:</span>&#160; </pre>
+<!--CRLF-->
+
+    <pre style="text-align: left;padding-bottom: 0px;margin: 0em;padding-left: 0px;width: 100%;padding-right: 0px;font-family: &#39;Courier New&#39;, courier, monospace;color: black;font-size: 8pt;padding-top: 0px"><span style="color: #606060">  32:</span>     var claims = handlers.ValidateToken(samlSecurityToken);</pre>
+<!--CRLF-->
+
+    <pre style="text-align: left;padding-bottom: 0px;margin: 0em;padding-left: 0px;width: 100%;padding-right: 0px;font-family: &#39;Courier New&#39;, courier, monospace;color: black;font-size: 8pt;padding-top: 0px"><span style="color: #606060">  33:</span>&#160; </pre>
+<!--CRLF-->
+
+    <pre style="text-align: left;padding-bottom: 0px;margin: 0em;padding-left: 0px;width: 100%;padding-right: 0px;font-family: &#39;Courier New&#39;, courier, monospace;color: black;font-size: 8pt;padding-top: 0px"><span style="color: #606060">  34:</span>     <span style="color: #0000ff">return</span> claims;</pre>
+<!--CRLF-->
+
+    <pre style="text-align: left;padding-bottom: 0px;margin: 0em;padding-left: 0px;width: 100%;padding-right: 0px;font-family: &#39;Courier New&#39;, courier, monospace;color: black;font-size: 8pt;padding-top: 0px"><span style="color: #606060">  35:</span> }</pre>
+<!--CRLF--></div>
+</div>
+
+<div id="codeSnippetWrapper">&#160;</div>
+
+<div><a href="http://snipurl.com/trustutil">Download the class from here</a>
+
+  <br /></div>

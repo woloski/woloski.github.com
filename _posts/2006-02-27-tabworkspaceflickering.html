@@ -1,0 +1,53 @@
+--- 
+layout: post
+title: "HowTo: avoid CAB TabWorkspace flickering"
+published: true
+meta: {}
+
+tags: 
+- CAB
+type: post
+status: publish
+---
+
+        <span style="font-family: arial"><span style="font-weight: bold"></span></span><font face="Arial" size="2"><span style="font-size: 10pt;font-family: Arial"></span></font>
+
+<p class="MsoNormal"><font face="Arial" size="2"><span style="font-size: 10pt;font-family: Arial">Have you ever tried putting a <a href="http://msdn2.microsoft.com/en-US/library/system.windows.forms.tabcontrol.aspx">TabControl</a> in a Winforms app and create a new TabPage via code? Just do a <a href="http://groups.google.com/groups?q=tabcontrol%20flickering&amp;sa=N&amp;tab=wg">goolge-groups search</a> and check  how many had the same annoying problem. <br>
+The problem is inside the Winforms 
+<b><span style="font-weight: bold">TabControl</span></b> implementation. <a href="http://codegallery.gotdotnet.com/cab">CAB</a> 
+<b><span style="font-weight: bold">TabWorkspace</span></b> is a simple wrapper 
+of this control and it has nothing to do with the 
+problem.</span></font></p>
+<p class="MsoNormal"><font face="Arial" size="2"><span style="font-size: 10pt;font-family: Arial">Avoid the flickering in the <b><span style="font-weight: bold">TabControl</span></b> is achieved using the <b><span style="font-weight: bold">WM_SETREDRAW</span></b> message (the first time I see this windows message was in <a href="http://www.delarou.name/PermaLink,guid,3b2a69dd-79bf-4a88-be0c-36d3e192b760.aspx">delarou's blog</a>, and surprisingly he was talking about the CAB DeckWorkspace). This windows message 
+should be sent to the <b><span style="font-weight: bold">TabPage handle 
+</span></b>to â€œtell himâ€ not to redraw before adding it to the TabControl 
+(tabControl.TabPages.Add). Sending the message to the <b><span style="font-weight: bold">TabControl </span></b>wonâ€™t have the desired results 
+however. </span></font></p>
+
+
+
+
+
+<p class="MsoNormal"><font face="Arial" size="2"><span style="font-size: 10pt;font-family: Arial">A common approach would be to 
+inherit from <b><span style="font-weight: bold">TabWorkspace</span></b>, 
+override <b><span style="font-weight: bold">OnShow</span></b> and send this 
+message before and after the <b><span style="font-weight: bold">base.OnShow</span></b>. However we donâ€™t have access 
+on the inherited class to the raw <b><span style="font-weight: bold">TabPage</span></b> that will be added. 
+<br>
+Because of this, the solution would 
+be to create a copy or modify the CAB TabWorkspace.  The </span></font><span style="font-size: 10pt;font-family: Arial"><b><span style="font-weight: bold">SetTabProperties</span></b> </span><font face="Courier New" size="2"><span style="font-size: 10pt;font-family: Arial">method needs to be changed<br>
+</span></font></p>
+
+<span><pre><span class="kwrd">const</span> <span class="kwrd">int</span> WM_SETREDRAW = 0xB;<br><br>[DllImport(<span class="str">"User32"</span>)]<br><span class="kwrd">static</span> <span class="kwrd">extern</span> <span class="kwrd">bool</span> SendMessage(IntPtr hWnd, <span class="kwrd">int</span> msg, <span class="kwrd">int</span> wParam, <span class="kwrd">int</span> lParam);<br><br><span class="kwrd">private</span> <span class="kwrd">void</span> SetRedraw(IntPtr handle, <span class="kwrd">bool</span> on)<br>{<br>    SendMessage(handle, WM_SETREDRAW, on ? 1 : 0, 0);<br>}<br><br><span class="kwrd">private</span> <span class="kwrd">void</span> SetTabProperties(TabPage page, TabSmartPartInfo smartPartInfo)<br>{<br>    page.Text = String.IsNullOrEmpty(smartPartInfo.Title) ? page.Text : smartPartInfo.Title;<br>            <br>    <span class="kwrd">try</span><br>    {<br>        <span class="rem">// Avoid flickering</span><br>        <span style="font-weight: bold">SetRedraw(page.Handle, </span><span style="font-weight: bold" class="kwrd">false</span><span style="font-weight: bold">);</span><br>        TabPage currentSelection = <span class="kwrd">this</span>.SelectedTab;<br>        callComposerActivateOnIndexChange = <span class="kwrd">false</span>;<br>        <span class="kwrd">if</span> (smartPartInfo.Position == TabPosition.Beginning)<br>        {<br>            TabPage[] pages = GetTabPages();<br>            <span class="kwrd">this</span>.TabPages.Clear();<br>            <span class="kwrd">this</span>.TabPages.Add(page);<br>            <span class="kwrd">this</span>.TabPages.AddRange(pages);                                      <br>        }<br>        <span class="kwrd">else</span> <span class="kwrd">if</span> (<span class="kwrd">this</span>.TabPages.Contains(page) == <span class="kwrd">false</span>)<br>        {<br>            <span class="kwrd">this</span>.TabPages.Add(page);<br>        }<br><br>        <span class="rem">// Preserve selection through the operation.</span><br>        <span class="kwrd">this</span>.SelectedTab = currentSelection;<br>        <span class="rem">// Avoid flickering</span><br>        <span style="font-weight: bold">SetRedraw(page.Handle, </span><span style="font-weight: bold" class="kwrd">true</span><span style="font-weight: bold">);</span><br>    }<br>    <span class="kwrd">finally</span><br>    {<br>        callComposerActivateOnIndexChange = <span class="kwrd">true</span>;<br>    }<br>}</pre></span>Download <a href="http://www.southworks.net/matiaswoloski/content/binary/CompositeUIExtensions.UI.zip">CompositeUIExtensions.UI</a> <br>
+<br>
+As a final note, I plan to write the TabWorkspace hide feature. This
+annoyance also has to do with the TabControl implementation (<a href="http://weblogs.asp.net/cazzu/archive/2005/11/01/TabControlBroken.aspx">kzu opened a bug</a>
+and msft said it wouldn't be fixed because of compatibility issues).
+However, it could be workarounded writing some code on the TabWorkspace.<br>
+Stay tuned!<br>
+<span style="font-family: arial"><br>
+</span>
+
+
+
+      

@@ -1,0 +1,209 @@
+--- 
+layout: post
+title: "Azure Services Platform - Passive Federation and Access Control #2"
+published: true
+meta: {}
+
+tags: 
+- Azure
+- Cloud Computing
+- Federation
+- Geneva
+- Identity Management
+- LiveID
+- PDC08
+- Zermatt
+type: post
+status: publish
+---
+<p></p>  <p>In the <a href="http://blogs.southworks.net/mwoloski/2008/11/07/azure-services-platform-passive-federation-access-control-1/">previous post</a> I introduced a scenario where you can use .NET Services Access Control and Windows LiveID to delegate authentication and authorization. In this post we will go through the different pieces needed in the application to perform authorization checks. First thing will be configure the passive federation using Geneva on the application and later we will create an ASP.NET MVC action filter to perform the access check against the incoming claims. </p>  <p><strong>Note</strong>: all the code showed here is using Microsoft Identity Framework &quot;Zermatt&quot; Beta 1. The new Geneva Framework might have some changes.</p>  <h3>Configuring passive federation on the website</h3>  <p>Configure passive federation on the website is about defining which SAML token version we will accept and the certificate we will use to decrypt the incoming token. The following configuration uses Zermatt Beta 1, so this probably changes on Geneva.</p>  <div>   <pre style="padding-right: 0px;padding-left: 0px;font-size: 8pt;padding-bottom: 0px;margin: 0em;width: 100%;color: black;padding-top: 0px;font-family: consolas, &#39;Courier New&#39;, courier, monospace"><span style="color: #0000ff">&lt;</span><span style="color: #800000">microsoft.identityModel</span><span style="color: #0000ff">&gt;</span>
+    <span style="color: #0000ff">&lt;</span><span style="color: #800000">tokenHandlers</span><span style="color: #0000ff">&gt;</span>
+      <span style="color: #0000ff">&lt;</span><span style="color: #800000">remove</span> <span style="color: #ff0000">type</span><span style="color: #0000ff">=&quot;Microsoft.IdentityModel.Tokens.Saml11.Saml11TokenHandler, Microsoft.IdentityModel, Version=0.4.1.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35&quot;</span> <span style="color: #0000ff">/&gt;</span>
+      <span style="color: #0000ff">&lt;</span><span style="color: #800000">add</span> <span style="color: #ff0000">type</span><span style="color: #0000ff">=&quot;Microsoft.IdentityModel.Tokens.Saml11.Saml11TokenHandler, Microsoft.IdentityModel, Version=0.4.1.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35&quot;</span><span style="color: #0000ff">&gt;</span>
+        <span style="color: #0000ff">&lt;</span><span style="color: #800000">samlSecurityTokenRequirement</span><span style="color: #0000ff">&gt;</span>
+          <span style="color: #0000ff">&lt;</span><span style="color: #800000">allowedAudienceUris</span><span style="color: #0000ff">&gt;</span>
+            <span style="color: #0000ff">&lt;</span><span style="color: #800000">add</span> <span style="color: #ff0000">value</span><span style="color: #0000ff">=&quot;http://localhost/YourApp/&quot;</span> <span style="color: #0000ff">/&gt;</span>            
+          <span style="color: #0000ff">&lt;/</span><span style="color: #800000">allowedAudienceUris</span><span style="color: #0000ff">&gt;</span>
+        <span style="color: #0000ff">&lt;/</span><span style="color: #800000">samlSecurityTokenRequirement</span><span style="color: #0000ff">&gt;</span>
+      <span style="color: #0000ff">&lt;/</span><span style="color: #800000">add</span><span style="color: #0000ff">&gt;</span>
+    <span style="color: #0000ff">&lt;/</span><span style="color: #800000">tokenHandlers</span><span style="color: #0000ff">&gt;</span>
+    <span style="color: #0000ff">&lt;</span><span style="color: #800000">federatedAuthentication</span> <span style="color: #ff0000">enabled</span><span style="color: #0000ff">=&quot;true&quot;</span><span style="color: #0000ff">&gt;</span>      
+    <span style="color: #0000ff">&lt;/</span><span style="color: #800000">federatedAuthentication</span><span style="color: #0000ff">&gt;</span>
+    <span style="color: #0000ff">&lt;</span><span style="color: #800000">serviceCertificate</span><span style="color: #0000ff">&gt;</span>
+      <span style="color: #0000ff">&lt;</span><span style="color: #800000">certificateReference</span> <span style="color: #ff0000">findValue</span><span style="color: #0000ff">=&quot;01 20 ...&quot;</span> <span style="color: #ff0000">storeLocation</span><span style="color: #0000ff">=&quot;LocalMachine&quot;</span> <span style="color: #ff0000">storeName</span><span style="color: #0000ff">=&quot;My&quot;</span> <span style="color: #ff0000">x509FindType</span><span style="color: #0000ff">=&quot;FindByThumbprint&quot;</span> <span style="color: #0000ff">/&gt;</span>
+    <span style="color: #0000ff">&lt;/</span><span style="color: #800000">serviceCertificate</span><span style="color: #0000ff">&gt;</span>
+  <span style="color: #0000ff">&lt;/</span><span style="color: #800000">microsoft.identityModel</span><span style="color: #0000ff">&gt;</span></pre>
+</div>
+
+<p>When the user click on the sign in button, the link will point to to the .NET Services Access Control passive STS url. The following method uses Geneva to generate this WS-Federation url.</p>
+
+<div>
+  <pre style="padding-right: 0px;padding-left: 0px;font-size: 8pt;padding-bottom: 0px;margin: 0em;width: 100%;color: black;padding-top: 0px;font-family: consolas, &#39;Courier New&#39;, courier, monospace"><span style="color: #0000ff">private</span> <span style="color: #0000ff">static</span> <span style="color: #0000ff">string</span> GetFederationUrl(<span style="color: #0000ff">string</span> realm, <span style="color: #0000ff">string</span> issuer, <span style="color: #0000ff">string</span> homeRealm, <span style="color: #0000ff">string</span> returnUrl)
+{
+    FederatedAuthenticationModule fam = <span style="color: #0000ff">new</span> FederatedAuthenticationModule();
+    fam.Realm = realm;
+    fam.Issuer = issuer;
+    fam.Reply = returnUrl;
+    SignInRequestMessage signInMsg = fam.CreateSignInRequest();
+    signInMsg.Parameters.Add(<span style="color: #006080">&quot;whr&quot;</span>, homeRealm);
+    <span style="color: #0000ff">string</span> url = signInMsg.WriteQueryString();
+    <span style="color: #0000ff">return</span> url;
+}</pre>
+</div>
+
+<p>The following code and configuration will give you an idea of the url that is being built. Pay attention to this url because a small change might break the whole thing.</p>
+
+<div>
+  <pre style="padding-right: 0px;padding-left: 0px;font-size: 8pt;padding-bottom: 0px;margin: 0em;width: 100%;color: black;padding-top: 0px;font-family: consolas, &#39;Courier New&#39;, courier, monospace"><span style="color: #0000ff">string</span> url = GetFederationUrl(ConfigurationManager.AppSettings[<span style="color: #006080">&quot;AccessControlRealm&quot;</span>], 
+                            ConfigurationManager.AppSettings[<span style="color: #006080">&quot;AccessControlIssuer&quot;</span>],
+                            ConfigurationManager.AppSettings[<span style="color: #006080">&quot;AccessControlHomeRealm&quot;</span>],
+                            replyTo);</pre>
+</div>
+
+<div>
+  <pre style="padding-right: 0px;padding-left: 0px;font-size: 8pt;padding-bottom: 0px;margin: 0em;width: 100%;color: black;padding-top: 0px;font-family: consolas, &#39;Courier New&#39;, courier, monospace"><span style="color: #008000">&lt;!-- Windows Azure Federation --&gt;</span>
+<span style="color: #0000ff">&lt;</span><span style="color: #800000">add</span> <span style="color: #ff0000">key</span><span style="color: #0000ff">=&quot;AccessControlRealm&quot;</span> <span style="color: #ff0000">value</span><span style="color: #0000ff">=&quot;http://localhost/YourApp/&quot;</span><span style="color: #0000ff">/&gt;</span> <span style="color: #008000">&lt;!-- should match to a scope --&gt;</span>
+<span style="color: #0000ff">&lt;</span><span style="color: #800000">add</span> <span style="color: #ff0000">key</span><span style="color: #0000ff">=&quot;AccessControlIssuer&quot;</span> <span style="color: #ff0000">value</span><span style="color: #0000ff">=&quot;https://accesscontrol.windows.net/passivests/yoursolution/LiveFederation.aspx&quot;</span><span style="color: #0000ff">/&gt;</span>
+<span style="color: #0000ff">&lt;</span><span style="color: #800000">add</span> <span style="color: #ff0000">key</span><span style="color: #0000ff">=&quot;AccessControlDefaultReply&quot;</span> <span style="color: #ff0000">value</span><span style="color: #0000ff">=&quot;http://localhost/YourApp&quot;</span> <span style="color: #0000ff">/&gt;</span>
+<span style="color: #0000ff">&lt;</span><span style="color: #800000">add</span> <span style="color: #ff0000">key</span><span style="color: #0000ff">=&quot;AccessControlHomeRealm&quot;</span> <span style="color: #ff0000">value</span><span style="color: #0000ff">=&quot;http://login.live.com&quot;</span> <span style="color: #0000ff">/&gt;</span></pre>
+</div>
+
+<p>The AccessControlRealm config is important because it will match the scope on your solution. You will have to configure the scope to encrypt with the public key of your website certificate and create the claim mappings from Windows LiveID to your well known claims. If you don't have the scope created or configured to output at least one claim you will get a 403 Forbidden on the .NET Services Access Control STS.</p>
+
+<p><a href="http://blogs.southworks.net/mwoloski/files/2008/11/windowslivewriterazureservicesplatformpassivefederationac-bdb7image-4.png"><img height="424" alt="image" src="http://blogs.southworks.net/mwoloski/files/2008/11/windowslivewriterazureservicesplatformpassivefederationac-bdb7image-thumb-1.png" width="640" border="0" /></a> </p>
+
+<h3>Performing access check in the web site</h3>
+
+<p>Now that we have everything configured and the token should be coming back to our website, it's time to do the access check. By using Geneva, the token will be transformed to a Principal object and it will be accessed through the ClaimsPrincipal static class. On the other hand, ASP.NET MVC allow us to plug into the action execution pipeline and get access to the context data like route values. The following code shows an ActionFilterAttribute that will grab the claims from the the Geneva ClaimsPrincipal and will call a strategy class that will perform the access check. If the access check is not successful, the filter will render a NotAuthorized view.</p>
+
+<div>
+  <pre style="padding-right: 0px;padding-left: 0px;font-size: 8pt;padding-bottom: 0px;margin: 0em;width: 100%;color: black;padding-top: 0px;font-family: consolas, &#39;Courier New&#39;, courier, monospace"><span style="color: #0000ff">namespace</span> YourApp.Identity
+{
+    <span style="color: #0000ff">using</span> System;
+    ...
+
+    <span style="color: #0000ff">public</span> <span style="color: #0000ff">class</span> ClaimAuthorizationRouteFilterAttribute : ActionFilterAttribute
+    {
+        <span style="color: #0000ff">public</span> ClaimAuthorizationRouteFilterAttribute(<span style="color: #0000ff">string</span>[] operations)
+        {
+            <span style="color: #0000ff">this</span>.Operations = operations;
+        }
+
+        <span style="color: #0000ff">public</span> <span style="color: #0000ff">string</span>[] Operations { get; set; }
+
+        <span style="color: #0000ff">public</span> <span style="color: #0000ff">override</span> <span style="color: #0000ff">void</span> OnActionExecuting(ActionExecutingContext context)
+        {
+            var identity = ClaimsPrincipal.Current.Identity <span style="color: #0000ff">as</span> IClaimsIdentity;
+            var claims = identity.Claims.ToArray();
+            var routeData = context.RouteData.Values.ToArray();            
+            var strategy = CreateAuthorizationStrategy();
+            var executionContext = <span style="color: #0000ff">new</span> ExecutionContext()
+            {
+                ClaimsNeeded = Operations,
+                OperationContextData = routeData,                
+            };
+
+            <span style="color: #0000ff">if</span> (!strategy.IsAuthorizedFor(executionContext, claims))
+            {
+                context.Result = <span style="color: #0000ff">new</span> ViewResult
+                {
+                    ViewName = <span style="color: #006080">&quot;NotAuthorized&quot;</span>
+                };
+            }
+
+            <span style="color: #0000ff">base</span>.OnActionExecuting(context);
+        }
+        
+    }
+}</pre>
+</div>
+
+<p>Finally, the following code shows an implemented strategy for a multi tenant application that manage projects.</p>
+
+<div>
+  <pre style="padding-right: 0px;padding-left: 0px;font-size: 8pt;padding-bottom: 0px;margin: 0em;width: 100%;color: black;padding-top: 0px;font-family: consolas, &#39;Courier New&#39;, courier, monospace"><span style="color: #0000ff">namespace</span> YourApp.Identity
+{
+    <span style="color: #0000ff">using</span> System.Linq;
+    <span style="color: #0000ff">using</span> System;
+
+    <span style="color: #0000ff">public</span> <span style="color: #0000ff">class</span> StandardAuthorizationStrategy : IAuthorizationStrategy
+    {
+        <span style="color: #0000ff">private</span> <span style="color: #0000ff">const</span> <span style="color: #0000ff">string</span> ProjectClaimType = <span style="color: #006080">&quot;urn:Project&quot;</span>;
+        <span style="color: #0000ff">private</span> <span style="color: #0000ff">const</span> <span style="color: #0000ff">string</span> TenantClaimType = <span style="color: #006080">&quot;urn:Tenant&quot;</span>;
+        <span style="color: #0000ff">private</span> <span style="color: #0000ff">const</span> <span style="color: #0000ff">string</span> OperationClaimType = <span style="color: #006080">&quot;urn:Operation&quot;</span>;
+
+        <span style="color: #0000ff">public</span> <span style="color: #0000ff">bool</span> IsAuthorizedFor(ExecutionContext context, Microsoft.IdentityModel.Claims.Claim[] claims)
+        {
+            <span style="color: #0000ff">bool</span> authorized = <span style="color: #0000ff">true</span>;
+            var tenantClaim = claims.SingleOrDefault(c =&gt; c.ClaimType == TenantClaimType);
+            var operationClaims = claims.Where(c =&gt; c.ClaimType == OperationClaimType);
+            var projectClaims = claims.Where(c =&gt; c.ClaimType == ProjectClaimType);
+        var tenant = context.OperationContextData[<span style="color: #006080">&quot;Tenant&quot;</span>].ToString();
+        var project = context.OperationContextData[<span style="color: #006080">&quot;Project&quot;</span>].ToString();
+
+            <span style="color: #0000ff">if</span> (!<span style="color: #0000ff">string</span>.IsNullOrEmpty(tenant))
+            {
+                authorized &amp;= tenantClaim.Value.Equals(<span style="color: #006080">&quot;*&quot;</span>, StringComparison.OrdinalIgnoreCase) ||
+                              tenantClaim.Value.Equals(tenant, StringComparison.OrdinalIgnoreCase);
+            }
+
+            <span style="color: #0000ff">if</span> (!<span style="color: #0000ff">string</span>.IsNullOrEmpty(project))            
+            {
+                authorized &amp;= projectClaims.Where( p =&gt; p.Value.Equals(<span style="color: #006080">&quot;*&quot;</span>, StringComparison.OrdinalIgnoreCase)).Count() &gt; 0 ||
+                              projectClaims.Where( p =&gt; p.Value.Equals(project, StringComparison.OrdinalIgnoreCase)).Count() &gt; 0;
+            }
+
+            <span style="color: #0000ff">if</span> (context.Operations != <span style="color: #0000ff">null</span>)
+            {
+                <span style="color: #0000ff">bool</span> temp = <span style="color: #0000ff">true</span>;
+                <span style="color: #0000ff">foreach</span> (<span style="color: #0000ff">string</span> op <span style="color: #0000ff">in</span> context.ClaimsNeeded)
+                {
+                    temp &amp;= operationClaims.Where(o =&gt; o.Value.Equals(op, StringComparison.OrdinalIgnoreCase)).Count() &gt; 0 ||
+                            operationClaims.Where(o =&gt; o.Value.Equals(<span style="color: #006080">&quot;*&quot;</span>, StringComparison.OrdinalIgnoreCase)).Count() &gt; 0;
+                }
+                authorized &amp;= temp;
+            }
+
+            <span style="color: #0000ff">return</span> authorized;
+        }
+    }
+}</pre>
+</div>
+
+<p>The only thing left is to put an attribute above the action. The following attribute specifies that the New action will be executed if the incoming token contains the following &quot;urn:Operation&quot; claims.</p>
+
+<div>
+  <pre style="padding-right: 0px;padding-left: 0px;font-size: 8pt;padding-bottom: 0px;margin: 0em;width: 100%;color: black;padding-top: 0px;font-family: consolas, &#39;Courier New&#39;, courier, monospace"><span style="color: #0000ff">public</span> <span style="color: #0000ff">class</span> ProjectsController : Controller
+{
+    
+        [ClaimAuthorizationRouteFilter(<span style="color: #0000ff">new</span> <span style="color: #0000ff">string</span>[] { 
+                                            <span style="color: #006080">&quot;AddUser&quot;</span>, 
+                                            <span style="color: #006080">&quot;AddUsersToProject&quot;</span>, 
+                                            <span style="color: #006080">&quot;CreateProject&quot;</span> })]
+        <span style="color: #0000ff">public</span> ActionResult New() {
+        ....
+
+    }
+
+    ...
+
+}</pre>
+</div>
+
+<p>So if a user browses to: http://yourapp/Contoso/Projecsts/New, the filter will call the strategy that will check:</p>
+
+<ul>
+  <li>if the user contains a tenant claim with the value &quot;Contoso&quot; (taken from the route data) </li>
+
+  <li>if the user contains three operation claims: AddUser, AddUsersToProject and CreateProject </li>
+</ul>
+
+<p>And if a user browses to: http://yourapp/Contoso/Projecsts/some-project/Edit, the filter will call the strategy that will check:</p>
+
+<ul>
+  <li>if the user contains a &quot;tenant&quot; claim with the value &quot;Contoso&quot; (taken from the route data) </li>
+
+  <li>if the user contains the &quot;operation&quot; claims specified in the Edit action </li>
+
+  <li>if the user contains a &quot;project&quot; claim with the value &quot;some-project&quot; </li>
+</ul>

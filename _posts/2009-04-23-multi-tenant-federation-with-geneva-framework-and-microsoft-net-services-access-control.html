@@ -1,0 +1,188 @@
+--- 
+layout: post
+title: Multi tenant federation with Geneva Framework and Microsoft .NET Services Access Control
+published: true
+meta: 
+  _edit_last: "24"
+  _edit_lock: "1241073165"
+tags: 
+- Azure
+- Cloud Computing
+- Federation
+- Geneva
+- Identity
+- LiveID
+type: post
+status: publish
+---
+<p>A typical scenario for an ISV that wants to create the &quot;next application in the cloud&quot; will be how to support identity federation with their customers (tenants). A common requirement I've heard is: </p>  <blockquote>   <p><strong><em>&quot;I want to enable single sign on and allow enterprises that have their own STS to integrate with us. For companies that don't have any identity infrastructure in place we want to allow them to login with an ubiquous credential like Windows LiveID. How do we do that without spending three months with a security guru?&quot;</em></strong></p> </blockquote>  <p>A possible answer is use <a href="http://portal.ex.azure.microsoft.com/">Microsoft .NET Services Access Control</a>. They enable that scenario in a very straightforward fashion. The following diagram shows a possible architecture that might fulfill the customer requirements. In this picture Southworks is an enterprise that has its own STS and Contoso doesn't, hence they use Windows LiveID for their users. The good thing about this is that in the middle we have ACS acting as the &quot;normalizer&quot;. It will receive tokens from LiveID and Southworks IP STS and will transform them to something Fabrikam knows (Roles, Actions, etc.).</p>  <p><a href="http://blogs.southworks.net/mwoloski/files/2009/04/windowslivewritermultitenantfedenetservicesaccesscontrol-de8cimage-24.png"><img height="438" alt="image" src="http://blogs.southworks.net/mwoloski/files/2009/04/windowslivewritermultitenantfedenetservicesaccesscontrol-de8cimage-thumb-11.png" width="640" border="0" /></a> </p>  <p>If you are like me, you might be wondering how this all works. Here are the gory details of all the HTTP interactions of a WS-Federation passive profile &quot;dance&quot;:</p>  <ol>   <li>A user opening a browser </li>    <ol>     <li>If he is at Contoso he browses to <a href="http://www.fabrikam-cloudapp.com/contoso">www.fabrikam-cloudapp.com/contoso</a> (or contoso.fabrikam-cloudapp.com)</li>      <li>If he is at Southworks he browses to <a href="http://www.fabrikam-cloudapp.com/southworks">www.fabrikam-cloudapp.com/southworks</a> (or southworks.fabrikam-cloudapp.com)</li>   </ol>    <li>At the web site there is an Http Module or ActionFilter in ASP.NET MVC that will read the tenant alias from the route.</li>    <li>The module will construct the SignInRequestMessage federation message and will redirect to ACS (<a href="https://{solution-name}.accesscontrol.windows.net/passivests/{federation-endpoint">https://{solution-name}.accesscontrol.windows.net/passivests/{federation-endpoint</a>}).</li>    <ol>     <li>If it's Southworks tenant we have to use the <a href="https://{solution-name}.accesscontrol.windows.net/passivests/Federation.aspx">https://{solution-name}.accesscontrol.windows.net/passivests/Federation.aspx</a> endpoint of ACS. </li>      <li>If it's Contoso we have to use <a href="https://{solution-name}.accesscontrol.windows.net/passivests/LiveFederation.aspx">https://{solution-name}.accesscontrol.windows.net/passivests/LiveFederation.aspx</a> in the endpoint of ACS.        <br /><strong>Note: </strong>these urls are not in any ACS documentation for now</li>      <li>The homeRealm (whr) parameter will tell ACS which IP STS to use (Contoso = login.live.com, Southworks = login.southworks.net which is a url Southworks provided at provisioning probably).</li>      <li>Finally, the realm parameter is fabrikam-cloudapp application. This will have to match with the scope you create on ACS (more on that below).        <br /><strong>Note</strong>: Look at the code at the end of the post to see how homeRealm and realm is used.</li>   </ol>    <li>ACS will redirect the user to either LiveID or the company IP STS depending on the whr parameter</li>    <li>The user will login with LiveID cred or with other mechanisms if it's a Geneva Server (user/pwd, kerberos, certs, cardspace, etc.)</li>    <li>A token will be issued and will be POSTed to ACS federation endpoint</li>    <ol>     <li>[Contoso] In the case of LiveID you don't have to do anything because ACS setup all the federation for us. LiveID will issue a token with one claim: the WLID email.</li>      <li>[Southworks] In the case of the company IP STS you will have to configure ACS as a relying party and supply its certificate to encrypt the token in your IP STS. In ACS you will have to create an Issuer and upload the company IP STS certificate. The company STS will issue the name claim and maybe groups or other claims.</li>   </ol>    <li>ACS will read the token and apply the claim transformation (more on that below)</li>    <li>ACS will POST the token to <a href="http://www.fabrikam-cloudapp.com">www.fabrikam-cloudapp.com</a></li>    <li>Geneva Fx on the website will read the token, generate the ClaimsPrincipal and store it in a cookie for later usage.</li>    <li>Fabrikam can now authorize access to certain pages by reading the principal! either with IsInRole or for granular checks you could use Actions or a ClaimsAuthorizationManager</li> </ol>  <p>This is how ACS is configured for :</p>  <p><a href="http://blogs.southworks.net/mwoloski/files/2009/04/windowslivewritermultitenantfedenetservicesaccesscontrol-de8cimage-14.png"><img height="472" alt="ACS scope configuration" src="http://blogs.southworks.net/mwoloski/files/2009/04/windowslivewritermultitenantfedenetservicesaccesscontrol-de8cimage-thumb-6.png" width="640" border="0" /></a> </p>  <p>A better way to look at the table above is the following diagram:</p>  <p><a href="http://blogs.southworks.net/mwoloski/files/2009/04/windowslivewritermultitenantfedenetservicesaccesscontrol-de8cimage-20.png"><img height="480" alt="Claim mappings diagram" src="http://blogs.southworks.net/mwoloski/files/2009/04/windowslivewritermultitenantfedenetservicesaccesscontrol-de8cimage-thumb-9.png" width="634" border="0" /></a> </p>  <p>Here we are using the Geneva Fx manually inside an ASP.NET MVC action filter. We use it manually because the multi tenancy nature that we want to implement does not allow to use the fixed values from the wsFederation configuration section.</p>  <div>   <div style="padding-right: 0px;padding-left: 0px;font-size: 8pt;padding-bottom: 0px;width: 100%;color: black;padding-top: 0px;font-family: consolas, &#39;Courier New&#39;, courier, monospace">     <pre style="padding-right: 0px;padding-left: 0px;font-size: 8pt;padding-bottom: 0px;margin: 0em;width: 100%;color: black;padding-top: 0px;font-family: consolas, &#39;Courier New&#39;, courier, monospace"><span style="color: #606060">   1:</span> <span style="color: #0000ff">namespace</span> FabrikamCloudApp.Web.Identity</pre>
+
+    <pre style="padding-right: 0px;padding-left: 0px;font-size: 8pt;padding-bottom: 0px;margin: 0em;width: 100%;color: black;padding-top: 0px;font-family: consolas, &#39;Courier New&#39;, courier, monospace"><span style="color: #606060">   2:</span> {</pre>
+
+    <pre style="padding-right: 0px;padding-left: 0px;font-size: 8pt;padding-bottom: 0px;margin: 0em;width: 100%;color: black;padding-top: 0px;font-family: consolas, &#39;Courier New&#39;, courier, monospace"><span style="color: #606060">   3:</span>     <span style="color: #0000ff">using</span> System;</pre>
+
+    <pre style="padding-right: 0px;padding-left: 0px;font-size: 8pt;padding-bottom: 0px;margin: 0em;width: 100%;color: black;padding-top: 0px;font-family: consolas, &#39;Courier New&#39;, courier, monospace"><span style="color: #606060">   4:</span>     <span style="color: #0000ff">using</span> System.Globalization;</pre>
+
+    <pre style="padding-right: 0px;padding-left: 0px;font-size: 8pt;padding-bottom: 0px;margin: 0em;width: 100%;color: black;padding-top: 0px;font-family: consolas, &#39;Courier New&#39;, courier, monospace"><span style="color: #606060">   5:</span>     ...</pre>
+
+    <pre style="padding-right: 0px;padding-left: 0px;font-size: 8pt;padding-bottom: 0px;margin: 0em;width: 100%;color: black;padding-top: 0px;font-family: consolas, &#39;Courier New&#39;, courier, monospace"><span style="color: #606060">   6:</span>&#160; </pre>
+
+    <pre style="padding-right: 0px;padding-left: 0px;font-size: 8pt;padding-bottom: 0px;margin: 0em;width: 100%;color: black;padding-top: 0px;font-family: consolas, &#39;Courier New&#39;, courier, monospace"><span style="color: #606060">   7:</span>     [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method, Inherited = <span style="color: #0000ff">true</span>, AllowMultiple = <span style="color: #0000ff">false</span>)]</pre>
+
+    <pre style="padding-right: 0px;padding-left: 0px;font-size: 8pt;padding-bottom: 0px;margin: 0em;width: 100%;color: black;padding-top: 0px;font-family: consolas, &#39;Courier New&#39;, courier, monospace"><span style="color: #606060">   8:</span>     <span style="color: #0000ff">public</span> <span style="color: #0000ff">sealed</span> <span style="color: #0000ff">class</span> WSFederationAuthenticationFilterAttribute : ActionFilterAttribute, IExceptionFilter</pre>
+
+    <pre style="padding-right: 0px;padding-left: 0px;font-size: 8pt;padding-bottom: 0px;margin: 0em;width: 100%;color: black;padding-top: 0px;font-family: consolas, &#39;Courier New&#39;, courier, monospace"><span style="color: #606060">   9:</span>     {</pre>
+
+    <pre style="padding-right: 0px;padding-left: 0px;font-size: 8pt;padding-bottom: 0px;margin: 0em;width: 100%;color: black;padding-top: 0px;font-family: consolas, &#39;Courier New&#39;, courier, monospace"><span style="color: #606060">  10:</span>         <span style="color: #0000ff">public</span> <span style="color: #0000ff">override</span> <span style="color: #0000ff">void</span> OnActionExecuting(ActionExecutingContext filterContext)</pre>
+
+    <pre style="padding-right: 0px;padding-left: 0px;font-size: 8pt;padding-bottom: 0px;margin: 0em;width: 100%;color: black;padding-top: 0px;font-family: consolas, &#39;Courier New&#39;, courier, monospace"><span style="color: #606060">  11:</span>         {            </pre>
+
+    <pre style="padding-right: 0px;padding-left: 0px;font-size: 8pt;padding-bottom: 0px;margin: 0em;width: 100%;color: black;padding-top: 0px;font-family: consolas, &#39;Courier New&#39;, courier, monospace"><span style="color: #606060">  12:</span>             var principal = Thread.CurrentPrincipal;</pre>
+
+    <pre style="padding-right: 0px;padding-left: 0px;font-size: 8pt;padding-bottom: 0px;margin: 0em;width: 100%;color: black;padding-top: 0px;font-family: consolas, &#39;Courier New&#39;, courier, monospace"><span style="color: #606060">  13:</span>&#160; </pre>
+
+    <pre style="padding-right: 0px;padding-left: 0px;font-size: 8pt;padding-bottom: 0px;margin: 0em;width: 100%;color: black;padding-top: 0px;font-family: consolas, &#39;Courier New&#39;, courier, monospace"><span style="color: #606060">  14:</span>             <span style="color: #0000ff">if</span> (!principal.Identity.IsAuthenticated)</pre>
+
+    <pre style="padding-right: 0px;padding-left: 0px;font-size: 8pt;padding-bottom: 0px;margin: 0em;width: 100%;color: black;padding-top: 0px;font-family: consolas, &#39;Courier New&#39;, courier, monospace"><span style="color: #606060">  15:</span>             {</pre>
+
+    <pre style="padding-right: 0px;padding-left: 0px;font-size: 8pt;padding-bottom: 0px;margin: 0em;width: 100%;color: black;padding-top: 0px;font-family: consolas, &#39;Courier New&#39;, courier, monospace"><span style="color: #606060">  16:</span>                 <span style="color: #0000ff">string</span> realm;</pre>
+
+    <pre style="padding-right: 0px;padding-left: 0px;font-size: 8pt;padding-bottom: 0px;margin: 0em;width: 100%;color: black;padding-top: 0px;font-family: consolas, &#39;Courier New&#39;, courier, monospace"><span style="color: #606060">  17:</span>                 <span style="color: #0000ff">string</span> homeRealm;</pre>
+
+    <pre style="padding-right: 0px;padding-left: 0px;font-size: 8pt;padding-bottom: 0px;margin: 0em;width: 100%;color: black;padding-top: 0px;font-family: consolas, &#39;Courier New&#39;, courier, monospace"><span style="color: #606060">  18:</span>                 <span style="color: #0000ff">string</span> acsEndpoint;</pre>
+
+    <pre style="padding-right: 0px;padding-left: 0px;font-size: 8pt;padding-bottom: 0px;margin: 0em;width: 100%;color: black;padding-top: 0px;font-family: consolas, &#39;Courier New&#39;, courier, monospace"><span style="color: #606060">  19:</span>                 SignInRequestMessage message = <span style="color: #0000ff">null</span>;</pre>
+
+    <pre style="padding-right: 0px;padding-left: 0px;font-size: 8pt;padding-bottom: 0px;margin: 0em;width: 100%;color: black;padding-top: 0px;font-family: consolas, &#39;Courier New&#39;, courier, monospace"><span style="color: #606060">  20:</span>                 </pre>
+
+    <pre style="padding-right: 0px;padding-left: 0px;font-size: 8pt;padding-bottom: 0px;margin: 0em;width: 100%;color: black;padding-top: 0px;font-family: consolas, &#39;Courier New&#39;, courier, monospace"><span style="color: #606060">  21:</span>         <span style="color: #008000">// retrieve tenant from url (http://.../{tenant})</span></pre>
+
+    <pre style="padding-right: 0px;padding-left: 0px;font-size: 8pt;padding-bottom: 0px;margin: 0em;width: 100%;color: black;padding-top: 0px;font-family: consolas, &#39;Courier New&#39;, courier, monospace"><span style="color: #606060">  22:</span>                 var tenant = (<span style="color: #0000ff">string</span>)filterContext.RouteData.Values[<span style="color: #006080">&quot;tenant&quot;</span>];</pre>
+
+    <pre style="padding-right: 0px;padding-left: 0px;font-size: 8pt;padding-bottom: 0px;margin: 0em;width: 100%;color: black;padding-top: 0px;font-family: consolas, &#39;Courier New&#39;, courier, monospace"><span style="color: #606060">  23:</span>         </pre>
+
+    <pre style="padding-right: 0px;padding-left: 0px;font-size: 8pt;padding-bottom: 0px;margin: 0em;width: 100%;color: black;padding-top: 0px;font-family: consolas, &#39;Courier New&#39;, courier, monospace"><span style="color: #606060">  24:</span>         <span style="color: #008000">// lookup in some repository if the tenant setup a federation with its own sts</span></pre>
+
+    <pre style="padding-right: 0px;padding-left: 0px;font-size: 8pt;padding-bottom: 0px;margin: 0em;width: 100%;color: black;padding-top: 0px;font-family: consolas, &#39;Courier New&#39;, courier, monospace"><span style="color: #606060">  25:</span>                 <span style="color: #0000ff">if</span> (IsLiveIDFederation(tenant)) </pre>
+
+    <pre style="padding-right: 0px;padding-left: 0px;font-size: 8pt;padding-bottom: 0px;margin: 0em;width: 100%;color: black;padding-top: 0px;font-family: consolas, &#39;Courier New&#39;, courier, monospace"><span style="color: #606060">  26:</span>                 {</pre>
+
+    <pre style="padding-right: 0px;padding-left: 0px;font-size: 8pt;padding-bottom: 0px;margin: 0em;width: 100%;color: black;padding-top: 0px;font-family: consolas, &#39;Courier New&#39;, courier, monospace"><span style="color: #606060">  27:</span>                     acsEndpoint = <span style="color: #006080">&quot;LiveFederation.aspx&quot;</span>;</pre>
+
+    <pre style="padding-right: 0px;padding-left: 0px;font-size: 8pt;padding-bottom: 0px;margin: 0em;width: 100%;color: black;padding-top: 0px;font-family: consolas, &#39;Courier New&#39;, courier, monospace"><span style="color: #606060">  28:</span>                     homeRealm = <span style="color: #006080">&quot;http://login.live.com&quot;</span>;</pre>
+
+    <pre style="padding-right: 0px;padding-left: 0px;font-size: 8pt;padding-bottom: 0px;margin: 0em;width: 100%;color: black;padding-top: 0px;font-family: consolas, &#39;Courier New&#39;, courier, monospace"><span style="color: #606060">  29:</span>                 }</pre>
+
+    <pre style="padding-right: 0px;padding-left: 0px;font-size: 8pt;padding-bottom: 0px;margin: 0em;width: 100%;color: black;padding-top: 0px;font-family: consolas, &#39;Courier New&#39;, courier, monospace"><span style="color: #606060">  30:</span>                 <span style="color: #0000ff">else</span></pre>
+
+    <pre style="padding-right: 0px;padding-left: 0px;font-size: 8pt;padding-bottom: 0px;margin: 0em;width: 100%;color: black;padding-top: 0px;font-family: consolas, &#39;Courier New&#39;, courier, monospace"><span style="color: #606060">  31:</span>                 {</pre>
+
+    <pre style="padding-right: 0px;padding-left: 0px;font-size: 8pt;padding-bottom: 0px;margin: 0em;width: 100%;color: black;padding-top: 0px;font-family: consolas, &#39;Courier New&#39;, courier, monospace"><span style="color: #606060">  32:</span>                     acsEndpoint = <span style="color: #006080">&quot;Federation.aspx&quot;</span>;</pre>
+
+    <pre style="padding-right: 0px;padding-left: 0px;font-size: 8pt;padding-bottom: 0px;margin: 0em;width: 100%;color: black;padding-top: 0px;font-family: consolas, &#39;Courier New&#39;, courier, monospace"><span style="color: #606060">  33:</span>                     homeRealm = GetIdentityProviderUrl(tenant);</pre>
+
+    <pre style="padding-right: 0px;padding-left: 0px;font-size: 8pt;padding-bottom: 0px;margin: 0em;width: 100%;color: black;padding-top: 0px;font-family: consolas, &#39;Courier New&#39;, courier, monospace"><span style="color: #606060">  34:</span>                 }</pre>
+
+    <pre style="padding-right: 0px;padding-left: 0px;font-size: 8pt;padding-bottom: 0px;margin: 0em;width: 100%;color: black;padding-top: 0px;font-family: consolas, &#39;Courier New&#39;, courier, monospace"><span style="color: #606060">  35:</span>&#160; </pre>
+
+    <pre style="padding-right: 0px;padding-left: 0px;font-size: 8pt;padding-bottom: 0px;margin: 0em;width: 100%;color: black;padding-top: 0px;font-family: consolas, &#39;Courier New&#39;, courier, monospace"><span style="color: #606060">  36:</span>                 realm = <span style="color: #006080">&quot;http://www.fabrikam-cloudapp.com/&quot;</span>;</pre>
+
+    <pre style="padding-right: 0px;padding-left: 0px;font-size: 8pt;padding-bottom: 0px;margin: 0em;width: 100%;color: black;padding-top: 0px;font-family: consolas, &#39;Courier New&#39;, courier, monospace"><span style="color: #606060">  37:</span>                 <span style="color: #0000ff">string</span> issuer = <span style="color: #006080">&quot;https://{solution-name}.accesscontrol.windows.net/passivests/{federation-endpoint}&quot;</span></pre>
+
+    <pre style="padding-right: 0px;padding-left: 0px;font-size: 8pt;padding-bottom: 0px;margin: 0em;width: 100%;color: black;padding-top: 0px;font-family: consolas, &#39;Courier New&#39;, courier, monospace"><span style="color: #606060">  38:</span>                                 .Replace(<span style="color: #006080">&quot;{solution-name}&quot;</span>, Configuration.FabrikamSolutionName)</pre>
+
+    <pre style="padding-right: 0px;padding-left: 0px;font-size: 8pt;padding-bottom: 0px;margin: 0em;width: 100%;color: black;padding-top: 0px;font-family: consolas, &#39;Courier New&#39;, courier, monospace"><span style="color: #606060">  39:</span>                                 .Replace(<span style="color: #006080">&quot;{federation-endpoint}&quot;</span>, endpoint);</pre>
+
+    <pre style="padding-right: 0px;padding-left: 0px;font-size: 8pt;padding-bottom: 0px;margin: 0em;width: 100%;color: black;padding-top: 0px;font-family: consolas, &#39;Courier New&#39;, courier, monospace"><span style="color: #606060">  40:</span>&#160; </pre>
+
+    <pre style="padding-right: 0px;padding-left: 0px;font-size: 8pt;padding-bottom: 0px;margin: 0em;width: 100%;color: black;padding-top: 0px;font-family: consolas, &#39;Courier New&#39;, courier, monospace"><span style="color: #606060">  41:</span>                 message = <span style="color: #0000ff">new</span> SignInRequestMessage(<span style="color: #0000ff">new</span> Uri(issuer), realm);</pre>
+
+    <pre style="padding-right: 0px;padding-left: 0px;font-size: 8pt;padding-bottom: 0px;margin: 0em;width: 100%;color: black;padding-top: 0px;font-family: consolas, &#39;Courier New&#39;, courier, monospace"><span style="color: #606060">  42:</span>                 message.Parameters.Add(<span style="color: #006080">&quot;whr&quot;</span>, homeRealm);</pre>
+
+    <pre style="padding-right: 0px;padding-left: 0px;font-size: 8pt;padding-bottom: 0px;margin: 0em;width: 100%;color: black;padding-top: 0px;font-family: consolas, &#39;Courier New&#39;, courier, monospace"><span style="color: #606060">  43:</span>&#160; </pre>
+
+    <pre style="padding-right: 0px;padding-left: 0px;font-size: 8pt;padding-bottom: 0px;margin: 0em;width: 100%;color: black;padding-top: 0px;font-family: consolas, &#39;Courier New&#39;, courier, monospace"><span style="color: #606060">  44:</span>         <span style="color: #008000">// redirect to ACS</span></pre>
+
+    <pre style="padding-right: 0px;padding-left: 0px;font-size: 8pt;padding-bottom: 0px;margin: 0em;width: 100%;color: black;padding-top: 0px;font-family: consolas, &#39;Courier New&#39;, courier, monospace"><span style="color: #606060">  45:</span>                 filterContext.Result = <span style="color: #0000ff">new</span> RedirectResult(message.WriteQueryString());</pre>
+
+    <pre style="padding-right: 0px;padding-left: 0px;font-size: 8pt;padding-bottom: 0px;margin: 0em;width: 100%;color: black;padding-top: 0px;font-family: consolas, &#39;Courier New&#39;, courier, monospace"><span style="color: #606060">  46:</span>             }</pre>
+
+    <pre style="padding-right: 0px;padding-left: 0px;font-size: 8pt;padding-bottom: 0px;margin: 0em;width: 100%;color: black;padding-top: 0px;font-family: consolas, &#39;Courier New&#39;, courier, monospace"><span style="color: #606060">  47:</span>             <span style="color: #0000ff">else</span></pre>
+
+    <pre style="padding-right: 0px;padding-left: 0px;font-size: 8pt;padding-bottom: 0px;margin: 0em;width: 100%;color: black;padding-top: 0px;font-family: consolas, &#39;Courier New&#39;, courier, monospace"><span style="color: #606060">  48:</span>             {</pre>
+
+    <pre style="padding-right: 0px;padding-left: 0px;font-size: 8pt;padding-bottom: 0px;margin: 0em;width: 100%;color: black;padding-top: 0px;font-family: consolas, &#39;Courier New&#39;, courier, monospace"><span style="color: #606060">  49:</span>                 <span style="color: #008000">// we are back on our site, and we've got our token transformed to ClaimsPrincipal</span></pre>
+
+    <pre style="padding-right: 0px;padding-left: 0px;font-size: 8pt;padding-bottom: 0px;margin: 0em;width: 100%;color: black;padding-top: 0px;font-family: consolas, &#39;Courier New&#39;, courier, monospace"><span style="color: #606060">  50:</span>         var claimsIdentity = principal.Identity <span style="color: #0000ff">as</span> IClaimsIdentity;</pre>
+
+    <pre style="padding-right: 0px;padding-left: 0px;font-size: 8pt;padding-bottom: 0px;margin: 0em;width: 100%;color: black;padding-top: 0px;font-family: consolas, &#39;Courier New&#39;, courier, monospace"><span style="color: #606060">  51:</span>&#160; </pre>
+
+    <pre style="padding-right: 0px;padding-left: 0px;font-size: 8pt;padding-bottom: 0px;margin: 0em;width: 100%;color: black;padding-top: 0px;font-family: consolas, &#39;Courier New&#39;, courier, monospace"><span style="color: #606060">  52:</span>                 var tenantClaim = claimsIdentity.Claims.FirstOrDefault(c =&gt; c.ClaimType == Configuration.TenantClaimType);</pre>
+
+    <pre style="padding-right: 0px;padding-left: 0px;font-size: 8pt;padding-bottom: 0px;margin: 0em;width: 100%;color: black;padding-top: 0px;font-family: consolas, &#39;Courier New&#39;, courier, monospace"><span style="color: #606060">  53:</span>                 <span style="color: #0000ff">if</span> (tenantClaim == <span style="color: #0000ff">null</span>)</pre>
+
+    <pre style="padding-right: 0px;padding-left: 0px;font-size: 8pt;padding-bottom: 0px;margin: 0em;width: 100%;color: black;padding-top: 0px;font-family: consolas, &#39;Courier New&#39;, courier, monospace"><span style="color: #606060">  54:</span>                 {</pre>
+
+    <pre style="padding-right: 0px;padding-left: 0px;font-size: 8pt;padding-bottom: 0px;margin: 0em;width: 100%;color: black;padding-top: 0px;font-family: consolas, &#39;Courier New&#39;, courier, monospace"><span style="color: #606060">  55:</span>                     <span style="color: #0000ff">throw</span> <span style="color: #0000ff">new</span> HttpException(401, <span style="color: #006080">&quot;Access is denied&quot;</span>);</pre>
+
+    <pre style="padding-right: 0px;padding-left: 0px;font-size: 8pt;padding-bottom: 0px;margin: 0em;width: 100%;color: black;padding-top: 0px;font-family: consolas, &#39;Courier New&#39;, courier, monospace"><span style="color: #606060">  56:</span>                 }</pre>
+
+    <pre style="padding-right: 0px;padding-left: 0px;font-size: 8pt;padding-bottom: 0px;margin: 0em;width: 100%;color: black;padding-top: 0px;font-family: consolas, &#39;Courier New&#39;, courier, monospace"><span style="color: #606060">  57:</span>                 </pre>
+
+    <pre style="padding-right: 0px;padding-left: 0px;font-size: 8pt;padding-bottom: 0px;margin: 0em;width: 100%;color: black;padding-top: 0px;font-family: consolas, &#39;Courier New&#39;, courier, monospace"><span style="color: #606060">  58:</span>                 var fam = FederatedAuthentication.WSFederationAuthenticationModule;                                </pre>
+
+    <pre style="padding-right: 0px;padding-left: 0px;font-size: 8pt;padding-bottom: 0px;margin: 0em;width: 100%;color: black;padding-top: 0px;font-family: consolas, &#39;Courier New&#39;, courier, monospace"><span style="color: #606060">  59:</span>                 <span style="color: #0000ff">if</span> (fam.CanReadSignInResponse(HttpContext.Current.Request, <span style="color: #0000ff">true</span>))</pre>
+
+    <pre style="padding-right: 0px;padding-left: 0px;font-size: 8pt;padding-bottom: 0px;margin: 0em;width: 100%;color: black;padding-top: 0px;font-family: consolas, &#39;Courier New&#39;, courier, monospace"><span style="color: #606060">  60:</span>                 {</pre>
+
+    <pre style="padding-right: 0px;padding-left: 0px;font-size: 8pt;padding-bottom: 0px;margin: 0em;width: 100%;color: black;padding-top: 0px;font-family: consolas, &#39;Courier New&#39;, courier, monospace"><span style="color: #606060">  61:</span>                     SecurityToken token = fam.GetSecurityToken(HttpContext.Current.Request);</pre>
+
+    <pre style="padding-right: 0px;padding-left: 0px;font-size: 8pt;padding-bottom: 0px;margin: 0em;width: 100%;color: black;padding-top: 0px;font-family: consolas, &#39;Courier New&#39;, courier, monospace"><span style="color: #606060">  62:</span>                     SessionSecurityToken sessionToken = <span style="color: #0000ff">new</span> SessionSecurityToken(principal <span style="color: #0000ff">as</span> IClaimsPrincipal, token);</pre>
+
+    <pre style="padding-right: 0px;padding-left: 0px;font-size: 8pt;padding-bottom: 0px;margin: 0em;width: 100%;color: black;padding-top: 0px;font-family: consolas, &#39;Courier New&#39;, courier, monospace"><span style="color: #606060">  63:</span>                     fam.SetPrincipalAndWriteSessionToken(sessionToken, <span style="color: #0000ff">true</span>);</pre>
+
+    <pre style="padding-right: 0px;padding-left: 0px;font-size: 8pt;padding-bottom: 0px;margin: 0em;width: 100%;color: black;padding-top: 0px;font-family: consolas, &#39;Courier New&#39;, courier, monospace"><span style="color: #606060">  64:</span>                     </pre>
+
+    <pre style="padding-right: 0px;padding-left: 0px;font-size: 8pt;padding-bottom: 0px;margin: 0em;width: 100%;color: black;padding-top: 0px;font-family: consolas, &#39;Courier New&#39;, courier, monospace"><span style="color: #606060">  65:</span>                     filterContext.Result = <span style="color: #0000ff">new</span> RedirectToRouteResult(</pre>
+
+    <pre style="padding-right: 0px;padding-left: 0px;font-size: 8pt;padding-bottom: 0px;margin: 0em;width: 100%;color: black;padding-top: 0px;font-family: consolas, &#39;Courier New&#39;, courier, monospace"><span style="color: #606060">  66:</span>                                                         <span style="color: #006080">&quot;DefaultRoute&quot;</span>,</pre>
+
+    <pre style="padding-right: 0px;padding-left: 0px;font-size: 8pt;padding-bottom: 0px;margin: 0em;width: 100%;color: black;padding-top: 0px;font-family: consolas, &#39;Courier New&#39;, courier, monospace"><span style="color: #606060">  67:</span>                                                         <span style="color: #0000ff">new</span> RouteValueDictionary(<span style="color: #0000ff">new</span> { tenant = tenantClaim.Value }));</pre>
+
+    <pre style="padding-right: 0px;padding-left: 0px;font-size: 8pt;padding-bottom: 0px;margin: 0em;width: 100%;color: black;padding-top: 0px;font-family: consolas, &#39;Courier New&#39;, courier, monospace"><span style="color: #606060">  68:</span>                 }                </pre>
+
+    <pre style="padding-right: 0px;padding-left: 0px;font-size: 8pt;padding-bottom: 0px;margin: 0em;width: 100%;color: black;padding-top: 0px;font-family: consolas, &#39;Courier New&#39;, courier, monospace"><span style="color: #606060">  69:</span>             }</pre>
+
+    <pre style="padding-right: 0px;padding-left: 0px;font-size: 8pt;padding-bottom: 0px;margin: 0em;width: 100%;color: black;padding-top: 0px;font-family: consolas, &#39;Courier New&#39;, courier, monospace"><span style="color: #606060">  70:</span>         }</pre>
+
+    <pre style="padding-right: 0px;padding-left: 0px;font-size: 8pt;padding-bottom: 0px;margin: 0em;width: 100%;color: black;padding-top: 0px;font-family: consolas, &#39;Courier New&#39;, courier, monospace"><span style="color: #606060">  71:</span>         </pre>
+
+    <pre style="padding-right: 0px;padding-left: 0px;font-size: 8pt;padding-bottom: 0px;margin: 0em;width: 100%;color: black;padding-top: 0px;font-family: consolas, &#39;Courier New&#39;, courier, monospace"><span style="color: #606060">  72:</span>     }</pre>
+
+    <pre style="padding-right: 0px;padding-left: 0px;font-size: 8pt;padding-bottom: 0px;margin: 0em;width: 100%;color: black;padding-top: 0px;font-family: consolas, &#39;Courier New&#39;, courier, monospace"><span style="color: #606060">  73:</span> }</pre>
+  </div>
+</div>
+
+<p>And just put this attribute on your entry point Controller:</p>
+
+<div>
+  <div style="padding-right: 0px;padding-left: 0px;font-size: 8pt;padding-bottom: 0px;width: 100%;color: black;padding-top: 0px;font-family: consolas, &#39;Courier New&#39;, courier, monospace">
+    <pre style="padding-right: 0px;padding-left: 0px;font-size: 8pt;padding-bottom: 0px;margin: 0em;width: 100%;color: black;padding-top: 0px;font-family: consolas, &#39;Courier New&#39;, courier, monospace"><span style="color: #606060">   1:</span> <span style="color: #0000ff">public</span> <span style="color: #0000ff">class</span> HomeController </pre>
+
+    <pre style="padding-right: 0px;padding-left: 0px;font-size: 8pt;padding-bottom: 0px;margin: 0em;width: 100%;color: black;padding-top: 0px;font-family: consolas, &#39;Courier New&#39;, courier, monospace"><span style="color: #606060">   2:</span> {</pre>
+
+    <pre style="padding-right: 0px;padding-left: 0px;font-size: 8pt;padding-bottom: 0px;margin: 0em;width: 100%;color: black;padding-top: 0px;font-family: consolas, &#39;Courier New&#39;, courier, monospace"><span style="color: #606060">   3:</span>     [WsFederationAuthenticationFilter]</pre>
+
+    <pre style="padding-right: 0px;padding-left: 0px;font-size: 8pt;padding-bottom: 0px;margin: 0em;width: 100%;color: black;padding-top: 0px;font-family: consolas, &#39;Courier New&#39;, courier, monospace"><span style="color: #606060">   4:</span>     <span style="color: #0000ff">public</span> <span style="color: #0000ff">void</span> Index()</pre>
+
+    <pre style="padding-right: 0px;padding-left: 0px;font-size: 8pt;padding-bottom: 0px;margin: 0em;width: 100%;color: black;padding-top: 0px;font-family: consolas, &#39;Courier New&#39;, courier, monospace"><span style="color: #606060">   5:</span>     {</pre>
+
+    <pre style="padding-right: 0px;padding-left: 0px;font-size: 8pt;padding-bottom: 0px;margin: 0em;width: 100%;color: black;padding-top: 0px;font-family: consolas, &#39;Courier New&#39;, courier, monospace"><span style="color: #606060">   6:</span>     }</pre>
+
+    <pre style="padding-right: 0px;padding-left: 0px;font-size: 8pt;padding-bottom: 0px;margin: 0em;width: 100%;color: black;padding-top: 0px;font-family: consolas, &#39;Courier New&#39;, courier, monospace"><span style="color: #606060">   7:</span> }</pre>
+  </div>
+</div>
+
+<p>I can tell my customer &quot;sure, we can implement this. It's only 73 lines of code and some configuration here and there&quot; :)</p>
+
+<p>Happy Federation!</p>

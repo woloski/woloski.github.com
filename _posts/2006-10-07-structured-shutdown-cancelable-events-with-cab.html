@@ -1,0 +1,17 @@
+--- 
+layout: post
+title: Structured Shutdown - Cancelable events with CAB
+published: true
+meta: 
+  _edit_last: "24"
+  _edit_lock: "1215665018"
+tags: 
+- CAB
+type: post
+status: publish
+---
+A recurring question on the <a href="http://www.codeplex.com/smartclient">CAB</a> community is how to perform a voting mechanism to close an application. The FormClosing event allow us to decide wether or not we will let the shell form close. However this is not enough because you might want to decide to close or not based on the state of the views or workitems.
+
+I came up with a simple solution to this using the EventBroker:
+
+<a href="http://blogs.southworks.net/mwoloski/files/2008/07/structured20shutdown20-20cancelableevents.zip">Download here</a>

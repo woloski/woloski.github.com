@@ -1,0 +1,15 @@
+--- 
+layout: post
+title: Creating Security Token Services with Microsoft Identity Framework (Zermatt)
+published: true
+meta: {}
+
+tags: 
+- Federation
+- Identity Management
+- Security Token Service
+- Zermatt
+type: post
+status: publish
+---
+<p><img height="111" alt="image" src="http://blogs.southworks.net/mwoloski/files/2008/08/image.png" width="172" align="right" /> Couple of weeks ago I <a href="http://blogs.southworks.net/mwoloski/2008/07/12/identity-prime-time-with-microsoft-identity-framework-zermatt/">posted</a> about <a href="https://connect.microsoft.com/site/sitehome.aspx?SiteID=642">Zermatt</a> and how Security Token Services and Claim Based authorization can help&#160; in the Identity Management area. </p>  <p></p>  <p></p>  <p><a href="http://blogs.southworks.net/siacomuzzi/">Sebastian</a> who has been working with Zermatt for a couple of weeks already, is <a href="http://blogs.southworks.net/siacomuzzi/2008/08/20/how-to-make-an-activepassive-sts-using-zermatt/">posting</a> a useful “straight to the point” how to implement active and passive STS’s using Zermatt. The abstractions in Zermatt are making this a joy. I like the separation of the STS from the underlying host (i.e. ASP.NET, WCF, “put-the-name-of-the-next-foundation”) because allows you to reuse the same STS for both the service layer and the presentation layer and have a consistent access control mechanism on both layers using claims.</p>  <p>Also, while we are on the subject, I recommend you to read the <a href="http://download.microsoft.com/download/a/7/6/a76e5770-19b1-415b-8b6c-6ff5c7b71574/J16_EN.zip">latest Architecture Journal on Identity</a>. I just read Vittorio’s article and it has all the things you need to know about the underlying concepts.</p>

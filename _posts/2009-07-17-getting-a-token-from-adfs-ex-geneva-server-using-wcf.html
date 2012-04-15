@@ -1,0 +1,61 @@
+--- 
+layout: post
+title: Getting a token from ADFS (ex Geneva Server) using WCF
+published: true
+meta: {}
+
+tags: 
+- ADFS
+- Geneva Server
+- WCF
+- Windows Identity Foundation
+type: post
+status: publish
+---
+<p>I’ve been doing some tests to get a token from ADFS (Geneva Server) using <strong>Windows Identity Foundation</strong>&#160; <strong>WSTrustClient. </strong>In this case we are using the UserNameMixed endpoint that expects a WS-Security UsernameToken (notice the MessageCredentialType.UserName).</p>  <pre>internal static ClaimsIdentityCollection RequestTokenWithUsernameMixed()
+{
+    var binding = new WS2007HttpBinding(SecurityMode.TransportWithMessageCredential, false);
+    binding.Security.Message.ClientCredentialType = MessageCredentialType.UserName;
+    binding.Security.Message.EstablishSecurityContext = false;
+
+    var credentials = new ClientCredentials();
+    credentials.UserName.UserName = &quot;Mary&quot;;
+    credentials.UserName.Password = &quot;Passw0rd!&quot;;
+    var endpoint = &quot;https://mygenevaserver/Trust/13/UsernameMixed&quot;;
+    var client = new WSTrustClient(binding, new EndpointAddress(new Uri(endpoint)), TrustVersion.WSTrust13, credentials);
+
+    var request = new RequestSecurityToken();
+    request.RequestType = &quot;http://schemas.microsoft.com/idfx/requesttype/issue&quot;;
+    request.AppliesTo = new EndpointAddress(&quot;http://localhost/activerp&quot;);
+    var token = client.Issue(request) as GenericXmlSecurityToken;
+
+    var claims = token.ToClaimsIdentityCollection(TrustVersion.WSTrust13, <br />                  CertificateUtility.GetCertificate(StoreName.My, StoreLocation.LocalMachine, <br />                  &quot;CN=Geneva Signing Certificate - WIN-66EYOLL2BVY&quot;), <br />                  CertificateUtility.GetCertificate(StoreName.My, StoreLocation.LocalMachine, <br />                  &quot;CN=WMSvc-WIN-66EYOLL2BVY&quot;));
+
+    return claims;
+}</pre>
+
+<p>Here is another one using the WindowsMixed endpoint (notice the MessageCredentialType.Windows and no username and password set)</p>
+
+<pre>internal static ClaimsIdentityCollection RequestTokenWithWindowsMixed()
+{
+    var binding = new WS2007HttpBinding(SecurityMode.TransportWithMessageCredential, false);
+    binding.Security.Message.ClientCredentialType = MessageCredentialType.Windows;
+    binding.Security.Message.EstablishSecurityContext = false;
+
+    var credentials = new ClientCredentials();
+    var endpoint = &quot;https://mygenevaser/Trust/13/WindowsMixed&quot;;
+    var client = new WSTrustClient(binding, new EndpointAddress(new Uri(endpoint)), TrustVersion.WSTrust13, credentials);
+
+    var request = new RequestSecurityToken();
+    request.RequestType = &quot;http://schemas.microsoft.com/idfx/requesttype/issue&quot;;
+    request.AppliesTo = new EndpointAddress(&quot;http://localhost/activerp&quot;);
+    var token = client.Issue(request) as GenericXmlSecurityToken;
+
+    var claims = token.ToClaimsIdentityCollection(TrustVersion.WSTrust13, <br />                   CertificateUtility.GetCertificate(StoreName.My, StoreLocation.LocalMachine, <br />                   &quot;CN=Geneva Signing Certificate - WIN-66EYOLL2BVY&quot;), <br />                   CertificateUtility.GetCertificate(StoreName.My, StoreLocation.LocalMachine, <br />                  &quot;CN=WMSvc-WIN-66EYOLL2BVY&quot;));
+
+    return claims;
+}</pre>
+
+<p>You can use this together with the <em>CreateChannelWithIssuedToken </em>extension method (as shown in a <a href="http://blogs.southworks.net/mwoloski/2008/12/14/managing-the-lifecycle-of-security-tokens-geneva-sts-wcf/">previous post</a>).</p>
+
+<p><a href="http://snipurl.com/activeprofilegeneva">Download the code</a></p>
