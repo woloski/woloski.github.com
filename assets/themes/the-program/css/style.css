@@ -902,6 +902,7 @@ pre {
   font-size: 46px;
   line-height: 52px;
   padding-bottom: 26px;
+  color: #AD4346;
 }
 .body .unit-body {
   border-top: 1px solid rgba(255, 255, 255, 0.6);
@@ -980,6 +981,7 @@ pre {
   }
   .the-header .unit-head .nav-global .logo a:hover {
     background-color: transparent;
+    color: #c26164;
   }
 }
 /*
