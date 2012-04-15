@@ -1,5 +1,6 @@
 ---
 layout: post
+title: Collecting events from the Event Log using Reactive Extensions
 tags : [adfs, identity, reactive, event-log]
 ---
 {% include JB/setup %}
