@@ -4,8 +4,6 @@ tags : [adfs, identity, reactive, event-log]
 ---
 {% include JB/setup %}
 
-## ADFS Windows Log Event Collector
-
 The event collector was one of the features that represented a challenge for the team to implement. We need an event collector to gather all `Audit` event that every ADFS in the farm writes so that we can build a web application and have a nice UI to see **who has logged in? when? to what application? and what claims he/she/it has?**. We usually  write to the Windows event log but we rarely consume events from it. As a developer of this feature you would ask yourself:
 
 * How to read from the event log? Push or pull model?
