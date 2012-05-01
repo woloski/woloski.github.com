@@ -31,6 +31,10 @@ Then [Glenn Block](http://codebetter.com/glennblock/) jumped into the conversati
 
 * **Designed for real time**: Aside from that another very interesting aspect is that node was designed specifically with real time web apps in mind i.e. WebSockets etc. There are some very compelling modules for building realtime applications which is one of the sweet spots for the community around node.
 
+And last but not least, Glenn makes emphasis on:
+
+* **Microsoft is not selling node**: Microsoft is not trying to tell .net devs to use node, we are trying to make Azure a more open place.
+
 
 I also recommend reading this post by Rick who also comes from a Microsoft perspective and compares the processing model of IIS against the event-loop from node.js: <http://rickgaribay.net/archive/2012/01/28/node-is-not-single-threaded.aspx>
 
