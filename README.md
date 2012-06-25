@@ -1,6 +1,6 @@
 ---
 
-published: false
+published: true
 ---
 
 # Jekyll-Bootstrap
