@@ -34,7 +34,6 @@ As I said at the beginning, I needed the VMs to record some [screencasts for Aut
 
 So I've learnt the trick from [Michael Washam blog](http://michaelwasham.com/2012/06/18/importing-and-exporting-virtual-machine-settings/). It basically goes like this:
 
-
 **Export VM definition to a file**
 
     Export-AzureVM dns-name vm-name -Path c:\sharepointvm.xml
@@ -42,7 +41,7 @@ So I've learnt the trick from [Michael Washam blog](http://michaelwasham.com/201
 **Delete VM (but not the vhd)**
 
     Remove-AzureVM dns-name vm-name
-    Remove-AzureService dns-name
+    Remove-AzureDeployment -ServiceName dns-name -Slot Production -Force
 
 **When you want to start it again, import VM definition from a file**
 
@@ -88,6 +87,8 @@ Another reason why I tried Windows Azure was because last week when I turned the
 ###DNS name
 
 Unless you use an elastic IP in AWS, every time you turn on the machine you get a different DNS so there is no way to have a fixed DNS name mapped to the VM. On the other hand, in Windows Azure you get always the same DNS name so you can create a CNAME record that works consistently. You could loose the DNS name if someone else provision a service under that DNS while your machine was turned off... but if you choose an obscure name I don't see that happening (unless someone hates you :)
+
+**UPDATE**: Actually, it is even better. You can use Remove-AzureDeployment to remove the VM from the Cloud Service while keeping the dns name reserved for you. Meaning you can reserve CNAMEs effectively while turning on and off the VM (something that would cost around 7 USD per month using elasti IPs if you use it couple of days a week). Thanks [Michael Wood](http://mvwood.com/) for pointing this out.
 
 ##Conclusion
 
