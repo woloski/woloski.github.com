@@ -55,8 +55,8 @@ Windows Azure is cheaper than AWS for this usecase. When I created VM in AWS fro
 
 	Large VM in AWS = $0.46/hr
 	Small VM in Windows Azure = $0.115/hr
-	Storage in AWS = $0.10 / GB
-	Storage in Windows Azure = $0.125
+	Storage in AWS = $0.125 / GB
+	Storage in Windows Azure = $0.125 / GB
 
 So let's say you use the VM couple of days per week 
 
@@ -69,6 +69,12 @@ So let's say you use the VM couple of days per week
 
 	30GB = 0.10 * 30 = 3 USD in AWS
 	30GB = 0.125 * 30 = 3.75 USD in Windows Azure
+
+**Update**: [Nuno](https://twitter.com/NunoGodinho) pointed out that the pricing for AWS above is wrong. It's actually the same as Windows Azure $0.125/GB and also added that if you choose to disable geo redunancy Windows Azure will be even cheaper ($0.093/GB).
+
+	30GB = 0.125 * 30 = 3.75 USD in AWS
+	30GB = 0.125 * 30 = 3.75 USD in Windows Azure
+	30GB = 0.093 * 30 = 2.79 USD in Windows Azure without Geo redunandncy
 
 Storage transactions are depreciable in this case
 
