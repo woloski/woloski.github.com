@@ -5,11 +5,13 @@ tags : [webapi, ssl, certs, aspnet]
 ---
 {% include JB/setup %}
 
-There is no builtin support for client certificates in ASP.NET WebAPI. However it's easy to create a `DelegatingHandler` that intercepts all requests and checks the existance of a client certificate and it's value. This will only work if you host on IIS, because WebAPI as of today does not expose the client certificate in its object model.
+There is no builtin support for client certificates in ASP.NET WebAPI. However it's easy to create a `DelegatingHandler` that intercepts all requests and checks the existance of a client certificate and it's value. This will only work if you host on IIS, because WebAPI as of today does not expose the client certificate in its object model**.
 
 I've created a NuGet package that will add the `DelegatingHandler` to your project and inject it on the `GlobalConfiguration` using `WebActivator`.
 
 	Install-Package Auth10.AspNet.WebApi.ClientCert
+
+** *UPDATE*: It seems that adding #aspnet #webapi to your tweets is like sending the bat signal to [Henrik](https://twitter.com/frystyk) and [Glenn](https://twitter.com/gblock) from Microsoft. Good to know :). They pointed out that there is already [support for Client Certs](http://aspnetwebstack.codeplex.com/SourceControl/changeset/view/98d041ae352f#src%2fSystem.Net.Http.Formatting%2fHttpRequestMessageExtensions.cs) in a host-agnostic fashion but this is only available on the [nightly builds](http://blogs.msdn.com/b/henrikn/archive/2012/06/01/using-nightly-asp-net-web-stack-nuget-packages-with-vs-2012-rc.aspx) for now. There will be a `Request.GetClientCertificate` extension method that will get you that. I will update this NuGet to use that when WebAPI ships the RTM NuGets through the official channel.
 
 ## The devil is in the details
 
