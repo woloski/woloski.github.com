@@ -5,7 +5,7 @@ tags : [postgres, azure, iaas, vm]
 ---
 {% include JB/setup %}
 
-Create a new VM on the Windows Azure portal (NEW -> Virtual Machine -> Ubuntu Server 12.04). Make sure to enable SSH (here are some instructions to generate a key)
+Create a new VM on the Windows Azure portal (NEW -> Virtual Machine -> Ubuntu Server 12.04). Make sure to enable SSH (here are some [instructions to generate a key](https://www.windowsazure.com/en-us/manage/linux/how-to-guides/ssh-into-linux/))
 
 <img src="http://puu.sh/1fq8Y" width="600" />
 
