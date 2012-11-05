@@ -36,7 +36,7 @@ Once connected, run the following commands to install Postgres
     listen_addresses = '*'
 
     # restart
-    sudo /etc/init.d/postgresql restart
+    sudo service postgresql restart
 
 
 ### Restoring a database from a dump
