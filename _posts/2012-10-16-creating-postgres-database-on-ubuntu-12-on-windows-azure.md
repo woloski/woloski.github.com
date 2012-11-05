@@ -23,15 +23,17 @@ Once connected, run the following commands to install Postgres
     # we need postgis features
     sudo apt-get install postgresql-9.1-postgis
     sudo apt-get install postgresql-contrib
-    sudo -u postgres createuser --superuser $USER
+
+    # create a user and assign a password
+    sudo -u postgres createuser --superuser <someuser> -P
 
     sudo vi /etc/postgresql/9.1/main/pg_hba.conf
     #add the following line to allow any IP connecting with user and password hashed with md5, you can also specify specific address or range
     host    all all 0.0.0.0 0.0.0.0 md5
 
     sudo vi /etc/postgresql/9.1/main/postgresql.conf 
-    #uncomment and change the local_addresses line to remote connections
-    local_addresses = '*'
+    #uncomment and change the listen_addresses line to remote connections
+    listen_addresses = '*'
 
     # restart
     sudo /etc/init.d/postgresql restart
@@ -40,7 +42,7 @@ Once connected, run the following commands to install Postgres
 ### Restoring a database from a dump
 
     createdb somedb -T template0
-    pg_restore-d somedb somedb.dump
+    pg_restore -d somedb somedb.dump
 
 ### Connecting to it
 
